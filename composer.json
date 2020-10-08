@@ -1,5 +1,5 @@
 {
-	"name": "texxasrulez/calendar",
+	"name": "fozo/calendar",
 	"type": "roundcube-plugin",
 	"description": "CalDav Capable Calendar plugin for Roundcube and Nextcloud",
 	"homepage": "https://github.com/texxasrulez/calendar",
