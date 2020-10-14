@@ -32,10 +32,10 @@
  *            'id' => 'Event ID used for editing',
  *           'uid' => 'Unique identifier of this event',
  *      'calendar' => 'Calendar identifier to add event to or where the event is stored',
- *         'start' => DateTime,  // Event start date/time as DateTime object
- *           'end' => DateTime,  // Event end date/time as DateTime object
+ *         'start' => DateTimeImmutable,  // Event start date/time as DateTimeImmutable object
+ *           'end' => DateTimeImmutable,  // Event end date/time as DateTimeImmutable object
  *        'allday' => true|false,  // Boolean flag if this is an all-day event
- *       'changed' => DateTime,    // Last modification date of event
+ *       'changed' => DateTimeImmutable,    // Last modification date of event
  *         'title' => 'Event title/summary',
  *      'location' => 'Location string',
  *   'description' => 'Event description',
@@ -43,10 +43,10 @@
  *    'recurrence' => array(   // Recurrence definition according to iCalendar (RFC 2445) specification as list of key-value pairs
  *            'FREQ' => 'DAILY|WEEKLY|MONTHLY|YEARLY',
  *        'INTERVAL' => 1...n,
- *           'UNTIL' => DateTime,
+ *           'UNTIL' => DateTimeImmutable,
  *           'COUNT' => 1..n,   // number of times
  *                      // + more properties (see http://www.kanzaki.com/docs/ical/recur.html)
- *          'EXDATE' => array(),  // list of DateTime objects of exception Dates/Times
+ *          'EXDATE' => array(),  // list of DateTimeImmutable objects of exception Dates/Times
  *      'EXCEPTIONS' => array(<event>),  list of event objects which denote exceptions in the recurrence chain
  *    ),
  * 'recurrence_id' => 'ID of the recurrence group',   // usually the ID of the starting event
@@ -59,7 +59,7 @@
  *        'alarms' => '-15M:DISPLAY',  // DEPRECATED Reminder settings inspired by valarm definition (e.g. display alert 15 minutes before event)
  *       'valarms' => array(           // List of reminders (new format), each represented as a hash array:
  *                  array(
- *                     'trigger' => '-PT90M',     // ISO 8601 period string prefixed with '+' or '-', or DateTime object
+ *                     'trigger' => '-PT90M',     // ISO 8601 period string prefixed with '+' or '-', or DateTimeImmutable object
  *                      'action' => 'DISPLAY|EMAIL|AUDIO',
  *                    'duration' => 'PT15M',      // ISO 8601 period string
  *                      'repeat' => 0,            // number of repetitions
@@ -229,8 +229,8 @@ abstract class calendar_driver
    *
    * @param array Hash array with event properties:
    *      id: Event identifier
-   *   start: Event start date/time as DateTime object
-   *     end: Event end date/time as DateTime object
+   *   start: Event start date/time as DateTimeImmutable object
+   *     end: Event end date/time as DateTimeImmutable object
    *  allday: Boolean flag if this is an all-day event
    * @return boolean True on success, False on error
    */
@@ -241,8 +241,8 @@ abstract class calendar_driver
    *
    * @param array Hash array with event properties:
    *      id: Event identifier
-   *   start: Event start date/time as DateTime object with timezone
-   *     end: Event end date/time as DateTime object with timezone
+   *   start: Event start date/time as DateTimeImmutable object with timezone
+   *     end: Event end date/time as DateTimeImmutable object with timezone
    * @return boolean True on success, False on error
    */
   abstract function resize_event($event);
@@ -319,8 +319,8 @@ abstract class calendar_driver
    * @return array A list of alarms, each encoded as hash array:
    *         id: Event identifier
    *        uid: Unique identifier of this event
-   *      start: Event start date/time as DateTime object
-   *        end: Event end date/time as DateTime object
+   *      start: Event start date/time as DateTimeImmutable object
+   *        end: Event end date/time as DateTimeImmutable object
    *     allday: Boolean flag if this is an all-day event
    *      title: Event title/summary
    *   location: Location string
@@ -345,10 +345,9 @@ abstract class calendar_driver
   public function validate($event)
   {
     $valid = true;
-
-    if (!is_object($event['start']) || !is_a($event['start'], 'DateTime'))
+    if (!is_object($event['start']) || !is_a($event['start'], 'DateTimeImmutable'))
       $valid = false;
-    if (!is_object($event['end']) || !is_a($event['end'], 'DateTime'))
+    if (!is_object($event['end']) || !is_a($event['end'], 'DateTimeImmutable'))
       $valid = false;
 
     return $valid;
@@ -458,8 +457,8 @@ abstract class calendar_driver
    * Create instances of a recurring event
    *
    * @param array  Hash array with event properties
-   * @param object DateTime Start date of the recurrence window
-   * @param object DateTime End date of the recurrence window
+   * @param object DateTimeImmutable Start date of the recurrence window
+   * @param object DateTimeImmutable End date of the recurrence window
    * @return array List of recurring event instances
    */
   public function get_recurring_events($event, $start, $end = null)
@@ -623,9 +622,9 @@ abstract class calendar_driver
       return array();
     }
 
-    // convert to DateTime for comparisons
-    $start  = new DateTime('@'.$start);
-    $end    = new DateTime('@'.$end);
+    // convert to DateTimeImmutable for comparisons
+    $start  = new DateTimeImmutable('@'.$start);
+    $end    = new DateTimeImmutable('@'.$end);
     // extract the current year
     $year   = $start->format('Y');
     $year2  = $end->format('Y');
@@ -762,8 +761,8 @@ abstract class calendar_driver
 
     try {
       $bday = $contact['birthday'];
-      if (!$bday instanceof DateTime) {
-        $bday = new DateTime($bday, new DateTimeZone('UTC'));
+      if (!$bday instanceof DateTimeImmutable) {
+        $bday = new DateTimeImmutable($bday, new DateTimeZone('UTC'));
       }
       $bday->_dateonly = true;
     }

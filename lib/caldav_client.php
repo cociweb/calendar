@@ -263,7 +263,7 @@ class caldav_client extends Sabre\DAV\Client
         $new_result = array();
         foreach ($result as $href => $status_list)
         {
-            $href = str_replace('@',"%40", $href);
+            $href = str_replace('@',"%40",$href);
             $new_result[$href] = isset($status_list[200]) ? $status_list[200] : array();
         }
 

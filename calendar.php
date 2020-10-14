@@ -1421,7 +1421,7 @@ if(count($cals) > 0){
           array_walk($data, function(&$change) use ($lib, $dtformat) {
             if ($change['date']) {
               $dt = $lib->adjust_timezone($change['date']);
-              if ($dt instanceof DateTime)
+              if ($dt instanceof DateTimeImmutable)
                 $change['date'] = $this->rc->format_date($dt, $dtformat, false);
             }
           });
@@ -1600,11 +1600,11 @@ if(count($cals) > 0){
     $source = rcube_utils::get_input_value('source', rcube_utils::INPUT_GET);
 
     if (!is_numeric($start) || strpos($start, 'T')) {
-      $start = new DateTime($start, $this->timezone);
+      $start = new DateTimeImmutable($start, $this->timezone);
       $start = $start->getTimestamp();
     }
     if (!is_numeric($end) || strpos($end, 'T')) {
-      $end = new DateTime($end, $this->timezone);
+      $end = new DateTimeImmutable($end, $this->timezone);
       $end = $end->getTimestamp();
     }
 
@@ -1623,7 +1623,7 @@ if(count($cals) > 0){
 
     $start = rcube_utils::get_input_value('start', rcube_utils::INPUT_GET);
     if (!$start) {
-      $start = new DateTime('today 00:00:00', $this->timezone);
+      $start = new DateTimeImmutable('today 00:00:00', $this->timezone);
       $start = $start->format('U');
     }
 
@@ -1719,7 +1719,7 @@ if(count($cals) > 0){
 
       // refresh count for this calendar
       if ($cal['counts']) {
-        $today = new DateTime('today 00:00:00', $this->timezone);
+        $today = new DateTimeImmutable('today 00:00:00', $this->timezone);
         $counts += $driver->count_events($cal['id'], $today->format('U'));
       }
     }
@@ -2259,8 +2259,8 @@ if(count($cals) > 0){
       
       $driver->new_event(array(
         'uid' => $this->generate_uid(),
-        'start' => new DateTime('@'.$start),
-        'end' => new DateTime('@'.($start + $duration)),
+        'start' => new DateTimeImmutable('@'.$start),
+        'end' => new DateTimeImmutable('@'.($start + $duration)),
         'allday' => $allday,
         'title' => rtrim($title),
         'free_busy' => $fb == 2 ? 'outofoffice' : ($fb ? 'busy' : 'free'),
@@ -2338,11 +2338,11 @@ if(count($cals) > 0){
     $event['start'] = preg_replace('/\s*\(.*\)/', '', $event['start']);
     $event['end']   = preg_replace('/\s*\(.*\)/', '', $event['end']);
 
-    // convert dates into DateTime objects in user's current timezone
+    // convert dates into DateTimeImmutable objects in user's current timezone
     if (!is_object($event['start']))
-      $event['start'] = new DateTime($event['start'], $this->timezone);
+      $event['start'] = new DateTimeImmutable($event['start'], $this->timezone);
     if (!is_object($event['end']))
-      $event['end'] = new DateTime($event['end'], $this->timezone);
+      $event['end'] = new DateTimeImmutable($event['end'], $this->timezone);
     $event['allday'] = !empty($event['allDay']);
     unset($event['allDay']);
 
@@ -2577,11 +2577,11 @@ if(count($cals) > 0){
 
     // convert dates into unix timestamps
     if (!empty($start) && !is_numeric($start)) {
-      $dts = new DateTime($start, $this->timezone);
+      $dts = new DateTimeImmutable($start, $this->timezone);
       $start = $dts->format('U');
     }
     if (!empty($end) && !is_numeric($end)) {
-      $dte = new DateTime($end, $this->timezone);
+      $dte = new DateTimeImmutable($end, $this->timezone);
       $end = $dte->format('U');
     }
     
@@ -2640,7 +2640,7 @@ if(count($cals) > 0){
     if (!$interval) $interval = 60;  // 1 hour
     
     if (!$dte) {
-      $dts = new DateTime('@'.$start);
+      $dts = new DateTimeImmutable('@'.$start);
       $dts->setTimezone($this->timezone);
     }
 
@@ -2664,7 +2664,7 @@ if(count($cals) > 0){
     // build a list from $start till $end with blocks representing the fb-status
     for ($s = 0, $t = $start; $t <= $end; $s++) {
       $t_end = $t + $interval * 60;
-      $dt = new DateTime('@'.$t);
+      $dt = new DateTimeImmutable('@'.$t);
       $dt->setTimezone($this->timezone);
 
       // determine attendee's status
@@ -2690,7 +2690,7 @@ if(count($cals) > 0){
       $t = $t_end;
     }
     
-    $dte = new DateTime('@'.$t_end);
+    $dte = new DateTimeImmutable('@'.$t_end);
     $dte->setTimezone($this->timezone);
     
     // let this information be cached for 5min
@@ -3188,7 +3188,7 @@ if(count($cals) > 0){
       if ($ical_objects->method) {
         $append   = '';
         $date_str = $this->rc->format_date($event['start'], $this->rc->config->get('date_format'), empty($event['start']->_dateonly));
-        $date     = new DateTime($event['start']->format('Y-m-d') . ' 12:00:00', new DateTimeZone('UTC'));
+        $date     = new DateTimeImmutable($event['start']->format('Y-m-d') . ' 12:00:00', new DateTimeZone('UTC'));
 
         // prepare a small agenda preview to be filled with actual event data on async request
         if ($ical_objects->method == 'REQUEST') {
@@ -3739,7 +3739,6 @@ if(count($cals) > 0){
 
         // save ics to a temp file and register as attachment
         $tmp_path = tempnam($this->rc->config->get('temp_dir'), 'rcmAttmntCal');
-        file_put_contents($tmp_path, $this->get_ical()->export(array($event), '', false, array($driver, 'get_attachment_body')));
 
         $args['attachments'][] = array(
           'path'     => $tmp_path,
@@ -3834,7 +3833,7 @@ if(count($cals) > 0){
    *
    * @param array $event Event data (with 'start' and 'recurrence')
    *
-   * @return DateTime Date of the first occurrence
+   * @return DateTimeImmutable Date of the first occurrence
    */
   public function find_first_occurrence($event)
   {

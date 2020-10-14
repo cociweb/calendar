@@ -1223,9 +1223,9 @@ class kolab_driver extends calendar_driver
           if ($old_start_date != $new_start_date || $old_start_time != $new_start_time) {
             $recurrence_id_format = libcalendaring::recurrence_id_format($event);
             foreach ($event['recurrence']['EXCEPTIONS'] as $i => $exception) {
-              $recurrence_id = is_a($exception['recurrence_date'], 'DateTime') ? $exception['recurrence_date'] :
+              $recurrence_id = is_a($exception['recurrence_date'], 'DateTimeImmutable') ? $exception['recurrence_date'] :
                   rcube_utils::anytodatetime($exception['_instance'], $old['start']->getTimezone());
-              if (is_a($recurrence_id, 'DateTime')) {
+              if (is_a($recurrence_id, 'DateTimeImmutable')) {
                 $recurrence_id->add($date_shift);
                 $event['recurrence']['EXCEPTIONS'][$i]['recurrence_date'] = $recurrence_id;
                 $event['recurrence']['EXCEPTIONS'][$i]['_instance'] = $recurrence_id->format($recurrence_id_format);
@@ -1394,7 +1394,7 @@ class kolab_driver extends calendar_driver
       $event['recurrence_date'] = $event['start'];
     }
 
-    if (!$event['_instance'] && is_a($event['recurrence_date'], 'DateTime')) {
+    if (!$event['_instance'] && is_a($event['recurrence_date'], 'DateTimeImmutable')) {
       $event['_instance'] = libcalendaring::recurrence_instance_identifier($event, $master['allday']);
     }
 
@@ -1464,13 +1464,13 @@ class kolab_driver extends calendar_driver
   public static function merge_exception_dates(&$event, $overlay)
   {
     // compute date offset from the exception
-    if ($overlay['start'] instanceof DateTime && $overlay['recurrence_date'] instanceof DateTime) {
+    if ($overlay['start'] instanceof DateTimeImmutable && $overlay['recurrence_date'] instanceof DateTimeImmutable) {
       $date_offset = $overlay['recurrence_date']->diff($overlay['start']);
     }
 
     foreach (array('start', 'end') as $prop) {
       $value = $overlay[$prop];
-      if (is_object($event[$prop]) && $event[$prop] instanceof DateTime) {
+      if (is_object($event[$prop]) && $event[$prop] instanceof DateTimeImmutable) {
         // set date value if overlay is an exception of the current instance
         if (substr($overlay['_instance'], 0, 8) == substr($event['_instance'], 0, 8)) {
           $event[$prop]->setDate(intval($value->format('Y')), intval($value->format('n')), intval($value->format('j')));
@@ -1781,8 +1781,8 @@ class kolab_driver extends calendar_driver
    * Create instances of a recurring event
    *
    * @param array  Hash array with event properties
-   * @param object DateTime Start date of the recurrence window
-   * @param object DateTime End date of the recurrence window
+   * @param object DateTimeImmutable Start date of the recurrence window
+   * @param object DateTimeImmutable End date of the recurrence window
    * @return array List of recurring event instances
    */
   public function get_recurring_events($event, $start, $end = null)
@@ -1958,7 +1958,7 @@ class kolab_driver extends calendar_driver
     }
 
     // all-day events go from 12:00 - 13:00
-    if (is_a($record['start'], 'DateTime') && $record['end'] <= $record['start'] && $record['allday']) {
+    if (is_a($record['start'], 'DateTimeImmutable') && $record['end'] <= $record['start'] && $record['allday']) {
       $record['end'] = clone $record['start'];
       $record['end']->add(new DateInterval('PT1H'));
     }
