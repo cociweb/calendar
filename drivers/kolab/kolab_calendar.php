@@ -629,7 +629,7 @@ class kolab_calendar extends kolab_storage_folder_api
     // determine a reasonable end date if none given
     if (!$end) {
       $end = clone $event['start'];
-      $end->add(new DateInterval('P100Y'));
+      $end = $end->add(new DateInterval('P100Y'));
     }
 
     // copy the recurrence rule from the master event (to be used in the UI)

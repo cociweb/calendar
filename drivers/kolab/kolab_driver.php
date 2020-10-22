@@ -849,7 +849,7 @@ class kolab_driver extends calendar_driver
 
             // set until-date on master event
             $master['recurrence']['UNTIL'] = clone $event['start'];
-            $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
+            $master['recurrence']['UNTIL'] = $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
             unset($master['recurrence']['COUNT']);
 
             // if all future instances are deleted, remove recurrence rule entirely (bug #1677)
@@ -1083,7 +1083,7 @@ class kolab_driver extends calendar_driver
 
         // set until-date on master event
         $master['recurrence']['UNTIL'] = clone $old['start'];
-        $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
+        $master['recurrence']['UNTIL'] = $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
         unset($master['recurrence']['COUNT']);
 
         // remove all exceptions after $event['start']
@@ -1174,7 +1174,7 @@ class kolab_driver extends calendar_driver
         if ($diff && ($old_start_date == $new_start_date || $old_duration == $new_duration)) {
           $event['start'] = $master['start']->add($date_shift);
           $event['end'] = clone $event['start'];
-          $event['end']->add(new DateInterval($new_duration));
+          $event['end'] = $event['end']->add(new DateInterval($new_duration));
 
           // remove fixed weekday, will be re-set to the new weekday in kolab_calendar::update_event()
           if ($old_start_date != $new_start_date && $event['recurrence']) {
@@ -1960,7 +1960,7 @@ class kolab_driver extends calendar_driver
     // all-day events go from 12:00 - 13:00
     if (is_a($record['start'], 'DateTimeImmutable') && $record['end'] <= $record['start'] && $record['allday']) {
       $record['end'] = clone $record['start'];
-      $record['end']->add(new DateInterval('PT1H'));
+      $record['end'] = $record['end']->add(new DateInterval('PT1H'));
     }
 
     // translate internal '_attachments' to external 'attachments' list

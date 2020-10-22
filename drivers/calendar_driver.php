@@ -482,7 +482,7 @@ abstract class calendar_driver
         }
 
         $end = clone $event['start'];
-        $end->add(new DateInterval($intvl));
+        $end = $end->add(new DateInterval($intvl));
       }
 
       $i = 0;

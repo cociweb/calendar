@@ -471,7 +471,7 @@ class ical_driver extends calendar_driver
                         if ($master['id'] != $event['id']) {
                             // set until-date on master event, then save this instance as new recurring event
                             $master['recurrence']['UNTIL'] = clone $event['start'];
-                            $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
+                            $master['recurrence']['UNTIL'] = $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
                             unset($master['recurrence']['COUNT']);
                             $update_master = true;
 
@@ -521,7 +521,7 @@ class ical_driver extends calendar_driver
                         if ($diff && ($old_start_date == $new_start_date || $old_duration == $new_duration)) {
                             $event['start'] = $master['start']->add($old['start']->diff($event['start']));
                             $event['end'] = clone $event['start'];
-                            $event['end']->add(new DateInterval('PT' . $new_duration . 'S'));
+                            $event['end'] = $event['end']->add(new DateInterval('PT' . $new_duration . 'S'));
                         } // dates did not change, use the ones from master
                         else if ($new_start_date . $new_start_time == $old_start_date . $old_start_time) {
                             $event['start'] = $master['start'];
@@ -998,7 +998,7 @@ class ical_driver extends calendar_driver
                     if ($master['id'] != $event['id']) {
                         // set until-date on master event
                         $master['recurrence']['UNTIL'] = clone $event['start'];
-                        $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
+                        $master['recurrence']['UNTIL'] = $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
                         unset($master['recurrence']['COUNT']);
                         $update_master = true;
 
