@@ -1673,7 +1673,7 @@ if(count($cals) > 0){
       if (!empty($event['recurrence'])) {
         // Some installations can't handle all occurrences (aborting the request w/o an error in log)
         $end = clone $event['start'];
-        $end->add(new DateInterval($event['recurrence']['FREQ'] == 'DAILY' ? 'P1Y' : 'P10Y'));
+        $end = $end->add(new DateInterval($event['recurrence']['FREQ'] == 'DAILY' ? 'P1Y' : 'P10Y'));
 
         foreach ($this->driver->get_recurring_events($event, $event['start'], $end) as $recurring) {
           $recurring['temporary'] = true;
@@ -2187,10 +2187,11 @@ if(count($cals) > 0){
 
     $event['className'] = $event['className'] ? explode(' ', $event['className']) : array();
 
-    if ($event['allDay']) {
+// We don't need to add datainterval since it is corrected by libcalendaring.
+/*    if ($event['allDay']) {
         $event['end'] = $event['end']->add(new DateInterval('P1D'));
     }
-
+*/
     if ($_GET['mode'] == 'print') {
         $event['editable'] = false;
     }
