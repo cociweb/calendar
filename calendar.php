@@ -2187,11 +2187,10 @@ if(count($cals) > 0){
 
     $event['className'] = $event['className'] ? explode(' ', $event['className']) : array();
 
-// We don't need to add datainterval since it is corrected by libcalendaring.
-/*    if ($event['allDay']) {
+    if ($event['allDay']) {
         $event['end'] = $event['end']->add(new DateInterval('P1D'));
     }
-*/
+
     if ($_GET['mode'] == 'print') {
         $event['editable'] = false;
     }
