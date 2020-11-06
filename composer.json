@@ -1,5 +1,5 @@
 {
-	"name": "fozo/calendar",
+	"name": "texxasrulez/calendar",
 	"type": "roundcube-plugin",
 	"description": "CalDav Capable Calendar plugin for Roundcube and Nextcloud",
 	"homepage": "https://github.com/texxasrulez/calendar",
@@ -32,7 +32,7 @@
 	"require": {
 		"php": ">=7.1.0",
 		"roundcube/plugin-installer": "~0.1.6",
-		"texxasrulez/libcalendaring": "3.5.2",
+		"fozo/libcalendaring": "dev-master",
 		"texxasrulez/libkolab": "3.5.4",
 		"sabre/dav": "4.1.2",
 		"league/oauth2-client": "*",
