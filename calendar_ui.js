@@ -580,6 +580,9 @@ function rcube_calendar_ui(settings)
             $dialog.parent().find('button:not(.ui-dialog-titlebar-close,.delete)').first().focus();
           }, 5);
         },
+        beforeClose: function(e) {
+          rcmail.command('menu-close', 'eventoptionsmenu', null, e);
+        },
         close: function(e) {
           close_func(e);
           $dialog.dialog('close');
@@ -2886,7 +2889,8 @@ function rcube_calendar_ui(settings)
     this.calendar_edit_dialog = function(calendar)
     {
       if (!calendar)
-        calendar = { name:'', color:'cc0000', editable:true, showalarms:true };
+	// change default color to null
+        calendar = { name:'', color:'', editable:true, showalarms:true };
 
       var title = rcmail.gettext((calendar.id ? 'editcalendar' : 'createcalendar'), 'calendar'),
         params = {action: calendar.id ? 'form-edit' : 'form-new', c:{ id:calendar.id }, driver: calendar.driver, _framed: 1},
@@ -2900,11 +2904,20 @@ function rcube_calendar_ui(settings)
             .val(calendar.color);
           contents.find('#calendar-showalarms')
             .prop('checked', calendar.showalarms);
+	// set caldav_url, caldav_pass and caldav_user to readonly
+		  contents.find('#caldav_url')
+            .prop('readonly', !calendar.editable || calendar.editable);
+		  contents.find('#caldav_user')
+            .prop('readonly', !calendar.editable || calendar.editable);
+		  contents.find('#caldav_pass')
+            .prop('readonly', !calendar.editable || calendar.editable);
         }),
         save_func = function() {
           var data,
             form = $dialog.contents().find('#calendarpropform'),
             name = form.find('#calendar-name');
+			caldav_user = form.find('#caldav_user');
+			caldav_pass = form.find('#caldav_pass');
 
           // form is not loaded
           if (!form || !form.length)
@@ -2915,17 +2928,22 @@ function rcube_calendar_ui(settings)
             rcmail.alert_dialog(rcmail.gettext('invalidcalendarproperties', 'calendar'), function() {
               name.select();
             });
-
             return false;
           }
 
           // post data to server
           data = form.serializeJSON();
+		  //if (!(data.caldav_url))
+			  
           if (data.color)
             data.color = data.color.replace(/^#/, '');
           if (calendar.id)
             data.id = calendar.id;
-
+			
+		  calendar.driver = 'caldav';
+		  if (!data.id)
+		  data.creation = true;
+		  
           me.saving_lock = rcmail.set_busy(true, 'calendar.savingdata');
           rcmail.http_post('calendar', { action:(calendar.id ? 'edit' : 'new'), c:data, driver: calendar.driver });
           $dialog.dialog("close");
@@ -3177,7 +3195,7 @@ function rcube_calendar_ui(settings)
           }
         });
 
-        setTimeout(function() { event_edit_dialog('new', copy); }, 50);
+		setTimeout(function() { event_edit_dialog('new', copy); }, 50);
       }
     };
 
@@ -3465,7 +3483,7 @@ function rcube_calendar_ui(settings)
       var brightness, select, id = cal.id;
 
       me.calendars[id] = $.extend({
-        url: rcmail.url('calendar/load_events', { source: id, driver: cal.driver }),
+		url: rcmail.url('calendar/load_events', { source: id, driver: cal.driver }),
         id: id
       }, cal);
 
@@ -4167,7 +4185,6 @@ window.rcmail && rcmail.addEventListener('init', function(evt) {
 
   // configure list operations
   rcmail.register_command('calendar-create', function(){ cal.calendar_edit_dialog(null); }, true);
-  rcmail.register_command('calendar-create', function(props){ props='{"driver":"caldav"}'; cal.calendar_edit_dialog($.extend($.parseJSON(props), { name:'', color:'cc0000', editable:true, showalarms:true })); }, true);
   rcmail.register_command('calendar-edit', function(){ cal.calendar_edit_dialog(cal.calendars[cal.selected_calendar]); }, false);
   rcmail.register_command('calendar-remove', function(){ cal.calendar_remove(cal.calendars[cal.selected_calendar]); }, false);
   rcmail.register_command('calendar-delete', function(){ cal.calendar_delete(cal.calendars[cal.selected_calendar]); }, false);
