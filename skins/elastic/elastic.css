@@ -3773,7 +3773,3 @@ html.touch #tasklist span.tags {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/*samoilov 29.10.2020 hide datepicker in left bottom corner*/
-#datepicker {
-	display:none;
-}
