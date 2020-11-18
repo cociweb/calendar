@@ -1,0 +1,4 @@
+/* hide datepicker in left bottom corner, calendar selector in event editor, show url button in calendar options menu*/
+#datepicker, #calendar-select, #rcmbtn118  {
+	display:none;
+}
