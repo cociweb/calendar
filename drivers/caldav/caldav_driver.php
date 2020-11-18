@@ -51,6 +51,7 @@ class caldav_driver extends calendar_driver
     private $sync_period;
     // Indicates debug mode for CalDAV
     static private $debug = null;
+	
     /**
      * Helper method to log debug msg if debug mode is enabled.
      */
@@ -67,7 +68,6 @@ class caldav_driver extends calendar_driver
         self::debug_log($msg);
         $this->rc->output->show_message($msg, 'error');
     }
-
     /**
      * Default constructor
      */
@@ -76,7 +76,7 @@ class caldav_driver extends calendar_driver
         $this->cal = $cal;
         $this->rc = $cal->rc;
         $this->server_timezone = new DateTimeZone(date_default_timezone_get());
-		
+
         // encrypted with your Roundcube user password using RC's default des_key
         $rcmail = rcmail::get_instance();
         $rc_des_key = self::getDesKey();
@@ -93,12 +93,11 @@ class caldav_driver extends calendar_driver
             self::$debug = $this->rc->config->get('calendar_caldav_debug', False);
         $this->_read_calendars();
     }
-
     /**
      * Read available calendars for the current user and store them internally
      */
     protected function _read_calendars()
-    {
+    {		
         $hidden = array_filter(explode(',', $this->rc->config->get('hidden_caldav_calendars', '')));
         if (!empty($this->rc->user->ID)) {
             $calendar_ids = array();
@@ -109,6 +108,7 @@ class caldav_driver extends calendar_driver
                 $this->rc->user->ID
             );
             while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
+				//$this->_raise_error("Flag!");
                 $arr['showalarms'] = intval($arr['showalarms']);
                 $arr['active'] = !in_array($arr['id'], $hidden);
                 $arr['name'] = html::quote($arr['name']);
@@ -148,51 +148,185 @@ class caldav_driver extends calendar_driver
         // 'personal' is unsupported in this driver
         return $calendars;
     }
+	
+	
     /**
      * Extracts CalDAV calendar.
      *
      * @see database_driver::create_calendar()
      */
     public function create_calendar($cal)
-    {
-        $result = false;
-        $cal['caldav_url'] = self::_encode_url($cal["caldav_url"]);
-        if(!isset($cal['color'])) $cal['color'] = 'cc0000';
+    {	
 		$cal = $this->_expand_pass($cal);
-        $calendars = $this->_autodiscover_calendars($this->_expand_pass($cal));
-        $cal_ids = array();
-        if($calendars)
+        $result = false;
+		// creating new calendar handler if we get creation=true from calendar_ui.js
+		if (!(empty($cal['creation'])))
+		{
+				$url_debug = $this->rc->config->get('calendar_preinstalled_calendars',array());
+				$user=explode('@', $this->rc->get_user_name())[0];
+				$cal['caldav_user']=$user;
+				$url_debug=str_replace('%l', $user, $url_debug[0]['caldav_url']);
+				$cal['caldav_pass']=$this->rc->get_user_password();
+				$cal['caldav_url']=self::_encode_url($url_debug.$cal['name']."/");
+				$this->_dav_create_calendar($cal);
+		}
+		
+		$calendars = $this->_autodiscover_calendars($this->_expand_pass($cal));
+		$cal_ids = array();
+		
+		// check for the existed DB calendars, trying to create them on DAV server and sync with DB
+		$result = $this->rc->db->query("SELECT * FROM ".$this->db_calendars);
+		if($this->rc->db->affected_rows($result))
+		{
+			while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
+				$db_sync_token = explode('/', $arr['caldav_tag']);
+				$cal['name'] = $arr['name'];
+				$cal['color'] = $arr['color'];
+				$cal['caldav_url'] = $arr['caldav_url'];
+				$cal['caldav_user'] = $arr['caldav_user'];
+				$cal['caldav_pass'] = $this->_decrypt_pass($arr['caldav_pass']);
+				if ($this->_dav_create_calendar($cal)!==false)
+				{
+					$events = array();
+					// Ignore recurrence events and read caldav props
+					foreach($this->_load_all_events($arr['calendar_id']) as $event) {
+						if($event["recurrence_id"] == 0)
+						{
+							$sync_client = $this->sync_clients[$arr['calendar_id']];
+							$sync_client->create_event($event);
+						}
+					}
+				}
+			}
+		}
+		
+		if($calendars)
         {
-            $result = true;
             foreach ($calendars as $calendar)
-            {
-                // Skip already existent calendars
-                $result = $this->rc->db->query("SELECT * FROM ".$this->db_calendars." WHERE caldav_url LIKE ?", str_replace('@', '%40', $calendar['href']));
-                if($this->rc->db->affected_rows($result)) continue;
-                $cal['caldav_url'] = self::_encode_url($calendar['href']);
-				$cal['editable'] = $calendar['editable'];
-                // Respect $props['name'] if only a single calendar was found e.g. no auto-discovery.
-                if(sizeof($calendars) > 1 || !isset($cal['name'])  || $cal['name'] == "")
-                    $cal['name'] = $calendar['name'];
-					$cal['color'] = $calendar['color'];
-                if (($obj_id = $this->_db_create_calendar($cal)) !== false) {
-                    array_push($cal_ids, $obj_id);
-                } else $result = false;
-            }
-        }
-        // Sync newly created calendars
-        if($cal_ids) {
-            // Re-read calendars to internal buffer.
-            $this->_read_calendars();
-            // Initial sync of newly created calendars.
-            foreach ($cal_ids as $cal_id) {
-                $this->_sync_calendar($cal_id);
-            }
-        }
+				{
+					// Skip already existent calendars
+					$result = $this->rc->db->query("SELECT * FROM ".$this->db_calendars." WHERE caldav_url LIKE ?", str_replace('@', '%40', $calendar['href']));
+					// if the same calendar is found in DB we need to compare their sync_tokens
+					if($this->rc->db->affected_rows($result))
+					{
+						while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
+							//check for existence of DB 
+							$db_sync_token = intval((explode('/', $arr['caldav_tag']))[5]);
+							if ($calendar['sync_token'] != $db_sync_token)
+							{
+								$calendar['caldav_url'] = self::_encode_url($calendar['href']);
+								$calendar['caldav_tag'] = "http://sabre.io/ns/sync/".strval($calendar['sync_token']);
+								$calendar['caldav_user'] = $cal['caldav_user'];
+								$calendar['id'] = strval($arr['calendar_id']);
+								if ($this->edit_calendar($calendar))
+								{
+									$this->_read_calendars();
+									$this->_sync_calendar(strval($arr['calendar_id']));
+								}
+							}
+						}
+					} else {
+						$cal['caldav_url'] = self::_encode_url($calendar['href']);
+						$cal['editable'] = $calendar['editable'];
+						// Respect $props['name'] if only a single calendar was found e.g. no auto-discovery.
+						// same last name bug fix
+							$cal['name'] = $calendar['name'];
+							$cal['color'] = $calendar['color'];
+						if (($obj_id = $this->_db_create_calendar($cal)) !== false)
+						{
+								$this->_read_calendars();
+								$this->_sync_calendar($obj_id);
+								array_push($cal_ids, $obj_id);
+								$result = true;
+						} else $result = false;
+					}
+				}
+		} else {
+			// if no calendars on DAV server then check for the existed DB calendars, create them on DAV server and sync with DB
+			$result = $this->rc->db->query("SELECT * FROM ".$this->db_calendars);
+			if($this->rc->db->affected_rows($result))
+			{
+				while ($result && ($arr = $this->rc->db->fetch_assoc($result))) {
+					$db_sync_token = explode('/', $arr['caldav_tag']);
+					$cal['name'] = $arr['name'];
+					$cal['color'] = $arr['color'];
+					$cal['caldav_url'] = $arr['caldav_url'];
+					$cal['caldav_user'] = $arr['caldav_user'];
+					$cal['caldav_pass'] = $this->_decrypt_pass($arr['caldav_pass']);
+					if ($this->_dav_create_calendar($cal)!==false)
+					{
+						$events = array();
+						// Ignore recurrence events and read caldav props
+						foreach($this->_load_all_events($arr['calendar_id']) as $event) {
+							if($event["recurrence_id"] == 0)
+							{
+								$sync_client = $this->sync_clients[$arr['calendar_id']];
+								$sync_client->create_event($event);
+							}
+						}
+					}
+				}
+			}
+		}
         return $result;
     }
+
     /**
-     * Create a new calendar assigned to the current user
+     * Create a new dav calendar assigned to the current user
+     *
+     * @param array Hash array with calendar properties
+     *                   name: Calendar name
+     *                  color: The color of the calendar
+     *             caldav_url: CalDAV calendar URL
+     *             caldav_tag: CalDAV calendar ctag
+     *            caldav_user: CalDAV authentication user
+     *            caldav_pass: CalDAV authentication password
+     * caldav_oauth_provider: Unique config ID for OAuth2 provider, see config.inc.php
+     *
+     * @return True on success, False on error
+     */
+    private function _dav_create_calendar($prop)
+    {
+		// randomize color of calendars on creation if no color was given
+		if(!isset($prop['color']) || ($prop['color'] == "")) $prop['color'] = bin2hex(random_bytes(3));
+		$prop = $this->_expand_pass($prop);
+		
+		// create calendar on caldav server with curl
+		$url=$prop['caldav_url'];
+		$name=$prop['name'];
+		$color=$prop['color'];
+		$xml='<D:mkcol xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><D:set><D:prop><D:resourcetype><C:calendar/></D:resourcetype><D:displayname>'.$name.'</D:displayname><D:calendar-color xmlns:D="http://apple.com/ns/ical/">'.$color.'</D:calendar-color></D:prop></D:set></D:mkcol>';
+		$c=curl_init();
+		curl_setopt($c, CURLOPT_URL, $url);
+		curl_setopt($c, CURLOPT_HTTPHEADER, array("Content-Type: application/xml"));
+		curl_setopt($c, CURLOPT_HEADER, 0);
+		curl_setopt($c, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($c, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		curl_setopt($c, CURLOPT_USERPWD, $prop['caldav_user'].":".$prop['caldav_pass']);
+		curl_setopt($c, CURLOPT_CUSTOMREQUEST, "MKCOL");
+		curl_setopt($c, CURLOPT_POSTFIELDS, $xml);
+		curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+		$data=curl_exec($c);
+		$info=curl_getinfo($c);
+		$err=curl_error($c);
+		curl_close($c);
+		
+		// check if calendar could be created
+		if ($info['http_code']==405)
+		{
+			return false;
+		}
+		if ($info['http_code']!==201)
+		{
+			$this->_raise_error("Error during creating the calendar:\n".$err."\n".$data."\nHttp code is: ".$info['http_code']);
+			return false;
+		}
+		return true;
+    }
+
+    /**
+     * Create a new db calendar assigned to the current user
      *
      * @param array Hash array with calendar properties
      *                   name: Calendar name
@@ -207,14 +341,7 @@ class caldav_driver extends calendar_driver
      */
     private function _db_create_calendar($prop)
     {
-        // randomize color of calendars on creation
-        if (!isset($prop['color'])) {
-            $color=bin2hex(random_bytes(3));
-            $prop['color']=$color;
-        }
-		
-        $prop = $this->_expand_pass($prop);
-		
+		$prop = $this->_expand_pass($prop);
         $result = $this->rc->db->query(
             "INSERT INTO " . $this->db_calendars . "
        (user_id, name, color, showalarms, caldav_url, caldav_tag, caldav_user, caldav_pass, caldav_oauth_provider)
@@ -229,10 +356,13 @@ class caldav_driver extends calendar_driver
             isset($prop["caldav_pass"]) && $prop["caldav_pass"] ? $this->_encrypt_pass($prop["caldav_pass"]) : null,
             isset($prop["caldav_oauth_provider"]) && $prop["caldav_oauth_provider"] ? $prop["caldav_oauth_provider"] : null
         );
+		
         if ($result)
             return $this->rc->db->insert_id($this->db_calendars);
         return false;
     }
+	
+	
     /**
      * Update properties of an existing calendar
      *
@@ -240,6 +370,21 @@ class caldav_driver extends calendar_driver
      */
     public function edit_calendar($cal)
     {
+		// prevent using form username and password, get them from config.inc.php
+		$user=explode('@', $this->rc->get_user_name())[0];
+		$cal['caldav_user']=$user;
+		$cal['caldav_pass']=$this->rc->get_user_password();
+		// check ability of DAV calendar update before making changes to DB
+		if (!(isset($cal["caldav_tag"])))
+		{
+			if ($this->_edit_calendar($cal)!==false)
+			{
+				$this->_read_calendars();
+			} else {
+				return false;
+			}
+		}
+		
         $query = $this->rc->db->query("UPDATE " . $this->db_calendars . "
             SET   name=?, color=?, showalarms=?, caldav_url=?, caldav_tag=?, caldav_user=?, caldav_oauth_provider=?
             WHERE calendar_id=?
@@ -255,7 +400,8 @@ class caldav_driver extends calendar_driver
             $this->rc->user->ID
         );
         // Change password if specified
-        if (isset($cal["caldav_pass"])) {
+        if (isset($cal["caldav_pass"]))
+		{
             $query = $this->rc->db->query("UPDATE " . $this->db_calendars . "
             SET   caldav_pass=?
             WHERE calendar_id=?
@@ -267,6 +413,43 @@ class caldav_driver extends calendar_driver
         }
         return $this->rc->db->affected_rows($query);
     }
+	
+	 /**
+     * Update properties of an existing dav calendar
+     */
+    private function _edit_calendar($prop)
+    {
+		$prop = $this->_expand_pass($prop);
+		// update calendar on caldav server with curl
+		$url=$prop['caldav_url'];
+		$name=$prop['name'];
+		$color=$prop['color'];
+		$xml='<D:propertyupdate xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><D:set><D:prop><D:resourcetype><C:calendar/></D:resourcetype><D:displayname>'.$name.'</D:displayname><D:calendar-color xmlns:D="http://apple.com/ns/ical/">'.$color.'</D:calendar-color></D:prop></D:set></D:propertyupdate>';
+		$c=curl_init();
+		curl_setopt($c, CURLOPT_URL, $url);
+		curl_setopt($c, CURLOPT_HTTPHEADER, array("Content-Type: application/xml"));
+		curl_setopt($c, CURLOPT_HEADER, 0);
+		curl_setopt($c, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($c, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		curl_setopt($c, CURLOPT_USERPWD, $prop['caldav_user'].":".$prop['caldav_pass']);
+		curl_setopt($c, CURLOPT_CUSTOMREQUEST, "PROPPATCH");
+		curl_setopt($c, CURLOPT_POSTFIELDS, $xml);
+		curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+		$data=curl_exec($c);
+		$info=curl_getinfo($c);
+		$err=curl_error($c);
+		curl_close($c);
+		// check if calendar could be updated
+		if ($info['http_code']!==207) 
+		{
+			$this->_raise_error("Error during update of the calendar:\n".$err."\n".$data."\nHttp code is: ".$info['http_code']);
+			return false;
+		} else {
+			return true;
+		}
+    }
+	
     /**
      * Set active/subscribed state of a calendar
      * Save a list of hidden calendars in user prefs
@@ -283,7 +466,7 @@ class caldav_driver extends calendar_driver
         return $this->rc->user->save_prefs(array('hidden_caldav_calendars' => join(',', array_keys($hidden))));
     }
     /**
-     * Delete the given calendar with all its contents
+     * Delete the given db calendar with all its contents
      *
      * @see calendar_driver::delete_calendar()
      */
@@ -291,16 +474,59 @@ class caldav_driver extends calendar_driver
     {
         if (!$this->calendars[$prop['id']])
             return false;
-        // events and attachments will be deleted by foreign key cascade
-        $query = $this->rc->db->query(
-            "DELETE FROM " . $this->db_calendars . " WHERE calendar_id=?",
-            $prop['id']
-        );
-		
-		if ($this->rc->config->get('calendar_default_calendar') == $prop['id'])
- 	    $this->rc->user->save_prefs(array('calendar_default_calendar' => null));
 	
-        return $this->rc->db->affected_rows($query);
+		//get prop attr from db
+		$result = $this->rc->db->query(
+				"SELECT * FROM " . $this->db_calendars . " WHERE calendar_id=?",
+				$prop['id']
+		);	
+		$arr = $this->rc->db->fetch_assoc($result);
+		$prop['name']= html::quote($arr['name']);
+		$prop['color']= $arr['color'];
+		$prop['caldav_url']=$arr['caldav_url'];
+		$prop['caldav_user']=$arr['caldav_user'];
+		$prop['caldav_pass']=$this->_decrypt_pass($arr['caldav_pass']);
+		
+		// check if dav calendar could be deleted
+		if (!$this->_delete_calendar($prop))
+				return false;
+		// events and attachments will be deleted by foreign key cascade
+		$query = $this->rc->db->query(
+			"DELETE FROM " . $this->db_calendars . " WHERE calendar_id=?",
+			$prop['id']
+		);
+		if ($this->rc->config->get('calendar_default_calendar') == $prop['id'])
+			$this->rc->user->save_prefs(array('calendar_default_calendar' => null));
+		$this->_read_calendars();		
+		return $this->rc->db->affected_rows($query);
+    }
+
+    /**
+     * Delete the given dav calendar with all its contents
+     */
+    private function _delete_calendar($prop)
+    {
+	    // delete calendar on caldav server with curl
+	    $url=$prop['caldav_url'];
+	    $c=curl_init();
+	    curl_setopt($c, CURLOPT_URL, $url);
+	    curl_setopt($c, CURLOPT_HTTPHEADER, array("Content-Type: application/xml"));
+	    curl_setopt($c, CURLOPT_HEADER, 0);
+	    curl_setopt($c, CURLOPT_SSL_VERIFYHOST, false);
+	    curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);
+	    curl_setopt($c, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	    curl_setopt($c, CURLOPT_USERPWD, $prop['caldav_user'].":".$prop['caldav_pass']);
+	    curl_setopt($c, CURLOPT_CUSTOMREQUEST, "DELETE");
+	    curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+	    $data=curl_exec($c);
+	    $err = curl_error($c);
+	    $info=curl_getinfo($c);
+	    curl_close($c);
+	    if ($info['http_code']!==204)
+		{
+			$this->_raise_error("Error during deleting the calendar:\n".$err."\n".$data."\nHttp code is: ".$info['http_code']);
+			return false;
+	    } else return true;
     }
     /**
      * Search for shared or otherwise not listed calendars the user has access
@@ -417,12 +643,14 @@ class caldav_driver extends calendar_driver
             $event = $this->get_event(array("id" => $event_id));
             $sync_client = $this->sync_clients[$cal_id];
             $success = $sync_client->update_event($event);
-            if($success === true) {
+            if($success === true)
+			{
                 self::debug_log("Successfully updated event \"$event_id\".");
                 // Trigger calendar sync to update ctags and etags.
                 $this->_sync_calendar($cal_id);
                 return true;
-            } else if($success < 0 && $sync_enforced == false) {
+            } else if($success < 0 && $sync_enforced == false)
+			{
                 self::debug_log("Event \"$event_id\", tag \"".$event["caldav_tag"]."\" not up to date, will update calendar first ...");
                 $this->_sync_calendar($cal_id);
                 return $this->edit_event($event, $old_event); // Re-try after re-sync
@@ -844,8 +1072,8 @@ class caldav_driver extends calendar_driver
                 );
                 if (!$this->rc->db->affected_rows($query))
                     break;
-                // stop adding events for inifinite recurrence after 20 years
-                if (++$count > 999 || (!$recurrence->recurEnd && !$recurrence->recurCount && $next_start->format('Y') > date('Y') + 20))
+				//stop adding events for inifinite recurrence after 3 years
+                if (++$count > 999 || (!$recurrence->recurEnd && !$recurrence->recurCount && $next_start->format('Y') > date('Y') + 3))
                     break;
             }
             // remove all exceptions after recurrence end
@@ -1083,6 +1311,7 @@ class caldav_driver extends calendar_driver
             if (!$this->_is_synced($cal_id))
                 $this->_sync_calendar($cal_id);
         }
+		
         return $this->_db_load_events($start, $end, $query, $calendars, $virtual, $modifiedsince);
     }
     /**
@@ -1545,7 +1774,8 @@ class caldav_driver extends calendar_driver
         ));
         $formfields["caldav_user"] = array(
             "label" => $this->cal->gettext("username"),
-            "value" => $input_caldav_user->show($calendar["caldav_user"]),
+			// add current username to the input
+            "value" => $input_caldav_user->show(explode('@', $this->rc->get_user_name())[0]),
             "id" => "caldav_user",
         );
         $input_caldav_pass = new html_passwordfield( array(
@@ -1554,7 +1784,8 @@ class caldav_driver extends calendar_driver
         ));
         $formfields["caldav_pass"] = array(
             "label" => $this->cal->gettext("password"),
-            "value" => $input_caldav_pass->show(null), // Don't send plain text password to GUI
+			// add current user password to the input
+            "value" => $input_caldav_pass->show($this->rc->get_user_password()),
             "id" => "caldav_pass",
         );
         $form['auth']['fieldsets']['caldav_auth_digest'] = array(
@@ -1599,6 +1830,8 @@ class caldav_driver extends calendar_driver
             if (!empty($tab['fieldsets']) && is_array($tab['fieldsets'])) {
                 $content = '';
                 foreach ($tab['fieldsets'] as $fieldset) {
+					// hide credentials fields
+					if ($fieldset['name'] == $this->cal->gettext('caldav_auth_digest')) continue;
                     $subcontent = $this->get_form_part($fieldset);
                     if ($subcontent) {
                         $content .= html::tag('fieldset', null, html::tag('legend', null, rcube::Q($fieldset['name'])) . $subcontent) ."\r\n";
@@ -1726,6 +1959,7 @@ class caldav_driver extends calendar_driver
     public function insert_default_calendar($props)
     {
         $props = $this->_expand_user($props);
+			
          foreach ($this->list_calendars() as $cal) {
             $vcal_info = $this->calendars[$cal['id']];
             if ($vcal_info['url'] == self::_encode_url($props['caldav_url'])) {
@@ -1760,13 +1994,14 @@ class caldav_driver extends calendar_driver
      *    name: Calendar display name
 	 *    color: Calendar color
      *    href: Absolute calendar URL
+	 *    sync_token: Calendar sync token 
      */
     private function _autodiscover_calendars($props)
     {
         $calendars = array();
         $current_user_principal = array('{DAV:}current-user-principal');
         $calendar_home_set = array('{urn:ietf:params:xml:ns:caldav}calendar-home-set');
-        $cal_attribs = array('{DAV:}resourcetype', '{DAV:}displayname', '{http://apple.com/ns/ical/}calendar-color');
+        $cal_attribs = array('{DAV:}resourcetype', '{DAV:}displayname', '{http://apple.com/ns/ical/}calendar-color','{DAV:}sync-token');
         $oauth_client = (isset($props["caldav_oauth_provider"]) && $props["caldav_oauth_provider"]) ? new oauth_client($this->rc, $props["caldav_oauth_provider"]) : null;
         if (!class_exists('caldav_client')) {
         	require_once ($this->cal->home.'/lib/caldav_client.php');
@@ -1787,15 +2022,28 @@ class caldav_driver extends calendar_driver
             $name = '';
             if (array_key_exists ('{DAV:}displayname', $response)) {
                 $name = $response['{DAV:}displayname'];
-			}
+            }
             if (array_key_exists ('{http://apple.com/ns/ical/}calendar-color', $response)) {
                 $color = $response['{http://apple.com/ns/ical/}calendar-color'];
-                $color = substr( substr( $color, 1 ), 0, 6);
+				$check_color = explode('#', $color);
+				if (!(array_key_exists(1, $check_color))) 
+				{
+					$color = $check_color[0];
+				} else {
+					$color = $check_color[1];
+				}
+            }
+			// add sync-token var
+			if (array_key_exists ('{DAV:}sync-token', $response)) {
+                $sync_token = $response['{DAV:}sync-token'];
+				$sync_token = explode('/', $sync_token);
+				$sync_token = intval($sync_token[5]);
             }
             array_push($calendars, array(
                 'name' => $name,
                 'color' => $color,
                 'href' => $caldav_url,
+				'sync_token' => $sync_token,
             ));
             return $calendars;
             // directly return given url as it is a calendar
@@ -1835,13 +2083,25 @@ class caldav_driver extends calendar_driver
                 }
                 if ($key == '{http://apple.com/ns/ical/}calendar-color') {
                     $color = $value;
-                    $color = substr( substr( $color, 1 ), 0, 6);
+					$check_color = explode('#', $color);
+					if (!(array_key_exists(1, $check_color)))
+					{
+						$color = $check_color[0];
+					} else {
+						$color = $check_color[1];
+					}
+                }
+				if ($key == '{DAV:}sync-token') {
+                    $sync_token = $value;
+					$sync_token = explode('/', $sync_token);
+					$sync_token = intval($sync_token[5]);
                 }
             }
             if ($found) {
                 array_push($calendars, array(
                     'name' => $name,
                     'color' => $color,
+					'sync_token' => $sync_token,
                     'href' => $base_uri.$collection,
                 ));
             }
@@ -1851,41 +2111,42 @@ class caldav_driver extends calendar_driver
     /**
      * Synchronizes events of given calendar.
      *
-     * @param int Calendar ID to sync
+     * @param int Calendar ID to sync and boolean indicator of newly created DAV calendar (with sync_token=1)
      */
     private function _sync_calendar($cal_id)
     {
-        self::debug_log("Syncing calendar id \"$cal_id\".");
-        $cal_sync = $this->sync_clients[$cal_id];
-        $events = array();
-        // Ignore recurrence events and read caldav props
-        foreach($this->_load_all_events($cal_id) as $event) {
-            if($event["recurrence_id"] == 0) {
-                array_push($events, $event);
-            }
-        }
-        $updates = $cal_sync->get_updates($events);
-        if($updates)
-        {
-            list($updates, $synced_event_ids) = $updates;
-            $updated_event_ids = $this->_perform_updates($updates);
-            // Delete events that are not in sync or updated.
-            foreach($events as $event)
-            {
-                if(array_search($event["id"], $updated_event_ids) === false && // No updated event
-                    array_search($event["id"], $synced_event_ids) === false) // No in-sync event
-                {
-                    // Assume: Event not in sync and not updated, so delete!
-                    $this->_db_remove_event($event, true);
-                    self::debug_log("Remove event \"".$event["id"]."\".");
-                }
-            }
-            // Update calendar ctag ...
-            $calendar = $this->calendars[$cal_id];
-            $calendar["caldav_tag"] = $cal_sync->get_ctag();
-            $this->edit_calendar($calendar);
-        }
-        self::debug_log("Successfully synced calendar id \"$cal_id\".");
+		self::debug_log("Syncing calendar id \"$cal_id\".");
+		$cal_sync = $this->sync_clients[$cal_id];
+		$events = array();
+		// Ignore recurrence events and read caldav props
+		foreach($this->_load_all_events($cal_id) as $event) {
+			if($event["recurrence_id"] == 0) {
+				array_push($events, $event);
+			}
+		}
+		$updates = $cal_sync->get_updates($events);
+		
+		if($updates)
+		{
+			list($updates, $synced_event_ids) = $updates;
+			$updated_event_ids = $this->_perform_updates($updates);	
+				// Delete events that are not in sync or updated.
+					foreach($events as $event)
+					{
+						if(array_search($event["id"], $updated_event_ids) === false && // No updated event
+							array_search($event["id"], $synced_event_ids) === false) // No in-sync event
+						{
+							// Assume: Event not in sync and not updated, so delete!
+							$this->_db_remove_event($event, true);
+							self::debug_log("Remove event \"".$event["id"]."\".");
+						}
+					}
+				// Update calendar ctag ...
+				$calendar = $this->calendars[$cal_id];
+				$calendar["caldav_tag"] = $cal_sync->get_ctag();
+				$this->edit_calendar($calendar);
+		}
+		self::debug_log("Successfully synced calendar id \"$cal_id\".");
     }
     /**
      * Return all events from the given calendar.
