@@ -219,7 +219,7 @@ class calendar extends rcube_plugin
         
           foreach ($this->get_drivers() as $driver_name => $driver) {
               foreach ($preinstalled_calendars as $cal) {
-                  if ($driver_name == $cal['driver']) {    
+                  if ($driver_name == $cal['driver']) {   		  
                       if (!$driver->create_calendar($cal)) {
                           $error_msg = 'Unable to add default calendars' . ($driver && $driver->last_error ? ': ' . $driver->last_error :'');
                           $this->rc->output->show_message($error_msg, 'error');
@@ -441,6 +441,7 @@ class calendar extends rcube_plugin
       $this->load_drivers();
       foreach ($this->get_drivers() as $driver) {
         foreach ((array)$driver->list_calendars() as $id => $prop) {
+		
           $prop["driver"] = get_class($driver);
           $this->_cals[$id] = $prop;
           $this->_cal_driver_map[$id] = $driver;
@@ -1099,6 +1100,7 @@ if(count($cals) > 0){
         echo $this->ui->calendar_editform($action, $cal);
         exit;
       case "new":
+		// driver for creation of calendar
         $driver = $this->get_driver_by_gpc();
         $success = $driver->create_calendar($cal);
         $reload = true;
@@ -1110,8 +1112,9 @@ if(count($cals) > 0){
         break;
       case "delete":
         $driver = $this->get_driver_by_cal($cal['id']);
-        if ($success = $driver->delete_calendar($cal))
-          $this->rc->output->command('plugin.destroy_source', array('id' => $cal['id']));
+        if ($success = $driver->delete_calendar($cal)) {
+			$reload = true;
+		}
         break;
       case "subscribe":
         $driver = $this->get_driver_by_cal($cal['id']);
