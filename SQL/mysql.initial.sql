@@ -6,7 +6,7 @@
  * @licence GNU AGPL
  */
 
-CREATE TABLE `calendar_oauth_states` (
+CREATE TABLE IF NOT EXISTS `calendar_oauth_states` (
   `provider` varchar(255) NOT NULL,
   `client_config_id` varchar(255) NOT NULL,
   `user_id` varchar(255) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE `calendar_oauth_states` (
   PRIMARY KEY (`state`)
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `calendar_oauth_access_tokens` (
+CREATE TABLE IF NOT EXISTS `calendar_oauth_access_tokens` (
   `provider` varchar(255) NOT NULL,
   `client_config_id` varchar(255) NOT NULL,
   `user_id` varchar(255) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE `calendar_oauth_access_tokens` (
   UNIQUE (`provider`(50), `client_config_id`(50), `user_id`(50), `scope`(50))
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `calendar_oauth_refresh_tokens` (
+CREATE TABLE IF NOT EXISTS `calendar_oauth_refresh_tokens` (
   `provider` varchar(255) NOT NULL,
   `client_config_id` varchar(255) NOT NULL,
   `user_id` varchar(255) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE `calendar_oauth_refresh_tokens` (
   UNIQUE (`provider`(50), `client_config_id`(50), `user_id`(50), `scope`(50))
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `caldav_calendars` (
+CREATE TABLE IF NOT EXISTS `caldav_calendars` (
   `calendar_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `name` varchar(255) NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE `caldav_calendars` (
   REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `caldav_events` (
+CREATE TABLE IF NOT EXISTS `caldav_events` (
   `event_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `calendar_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
   `recurrence_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
@@ -97,7 +97,7 @@ CREATE TABLE `caldav_events` (
   REFERENCES `caldav_calendars`(`calendar_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `caldav_attachments` (
+CREATE TABLE IF NOT EXISTS `caldav_attachments` (
   `attachment_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `event_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
   `filename` varchar(255) NOT NULL DEFAULT '',
@@ -110,7 +110,7 @@ CREATE TABLE `caldav_attachments` (
   REFERENCES `caldav_events`(`event_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `database_calendars` (
+CREATE TABLE IF NOT EXISTS `database_calendars` (
   `calendar_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `name` varchar(255) NOT NULL,
@@ -122,7 +122,7 @@ CREATE TABLE `database_calendars` (
     REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `database_events` (
+CREATE TABLE IF NOT EXISTS `database_events` (
   `event_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `calendar_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
   `recurrence_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
@@ -156,7 +156,7 @@ CREATE TABLE `database_events` (
     REFERENCES `database_calendars`(`calendar_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `database_attachments` (
+CREATE TABLE IF NOT EXISTS `database_attachments` (
   `attachment_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `event_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
   `filename` varchar(255) NOT NULL DEFAULT '',
@@ -168,7 +168,7 @@ CREATE TABLE `database_attachments` (
     REFERENCES `database_events`(`event_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `itipinvitations` (
+CREATE TABLE IF NOT EXISTS `itipinvitations` (
   `token` VARCHAR(64) NOT NULL,
   `event_uid` VARCHAR(255) NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL DEFAULT '0',
@@ -181,7 +181,7 @@ CREATE TABLE `itipinvitations` (
     REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `ical_calendars` (
+CREATE TABLE IF NOT EXISTS `ical_calendars` (
   `calendar_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` int(10) UNSIGNED NOT NULL DEFAULT '0',
   `name` varchar(255) NOT NULL,
@@ -199,7 +199,7 @@ CREATE TABLE `ical_calendars` (
   REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `ical_events` (
+CREATE TABLE IF NOT EXISTS `ical_events` (
   `event_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `calendar_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
   `recurrence_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
@@ -237,7 +237,7 @@ CREATE TABLE `ical_events` (
   REFERENCES `ical_calendars`(`calendar_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE TABLE `ical_attachments` (
+CREATE TABLE IF NOT EXISTS `ical_attachments` (
   `attachment_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `event_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
   `filename` varchar(255) NOT NULL DEFAULT '',
