@@ -28,8 +28,7 @@ Thank you for listening to this old mans ramblings.
 
 **Installation** 
 
-`<=PHP7.1` - `  composer require "texxasrulez/calendar": "~0.0.6.0"  `  Compatible with RCMCARDDAV ~3.0.3  
-`>=PHP7.2` - `  composer require "texxasrulez/calendar": "~0.0.7.0"  `  Compatible with RCMCARDDAV ^4.0  
+`>=PHP7.2` - `  composer require "cociweb/calendar": "~0.0.8.3"  `  Compatible with RCMCARDDAV ^4.0  
 
 This will download latest release version.  
 It will inject all sql schemas associated with this plugin with the exception of Kolab and LDAP.  
