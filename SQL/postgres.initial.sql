@@ -201,7 +201,7 @@ CREATE TABLE itipinvitations (
     REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE INDEX uid_idx ON itipinvitations (user_id,event_uid);
+CREATE INDEX iti_uid_idx ON itipinvitations (user_id,event_uid);
 
 CREATE SEQUENCE ical_calendars_seq;
 
