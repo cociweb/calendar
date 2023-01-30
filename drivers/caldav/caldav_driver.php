@@ -205,7 +205,7 @@ class caldav_driver extends calendar_driver
             foreach ($calendars as $calendar)
 				{
 					// Skip already existent calendars
-		    			$result = $this->rc->db->query("SELECT * FROM ".$this->db_calendars." WHERE user_id=".$ this->rc->user->ID." AND caldav_url LIKE ?", str_replace('@', '%40', $calendar['href']));
+		    			$result = $this->rc->db->query("SELECT * FROM ".$this->db_calendars." WHERE user_id=".$this->rc->user->ID." AND caldav_url LIKE ?", str_replace('@', '%40', $calendar['href']));
 					// if the same calendar is found in DB we need to compare their sync_tokens
 					if($this->rc->db->affected_rows($result))
 					{
