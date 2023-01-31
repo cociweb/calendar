@@ -12,23 +12,24 @@ Thank you for listening to this old mans ramblings.
 ---  
 
 **Tested and working using the following:**  
-* Debian 9.13  
-* Apache2 v2.4.25  
-* Roundcube v1.4.8  
-* Composer v1.10.9  
-* Nextcloud v19.0  
-* PHP v7.2.32  
+* Debian 11 (5.15.0-58-generic) 
+* Apache2 v2.4.54  
+* Roundcube v1.6.0  
+* Composer v2.5.1  
+* Nextcloud v25.0.3  
+* PHP v8.0.21  
 * MySQL Server v5.7.31  
-* Sabre/Dav v4.1.1  
-* Sabre/Event v5.1.0  
-* Sabre/Http v5.1.0  
-* Sabre/Uri v2.2.0  
-* Sabre/Vobject v4.3.1  
-* Sabre/Xml v2.2.1  
+* Sabre/Dav v4.2.2  
+* Sabre/Event v5.1.4  
+* Sabre/Http v5.1.6  
+* Sabre/Uri v2.3.2  
+* Sabre/Vobject v4.5.3  
+* Sabre/Xml v2.2.5  
+* CardDav v5.0.1
 
 **Installation** 
 
-`>=PHP7.2` - `  composer require "cociweb/calendar": "~0.0.8.4"  `  Compatible with RCMCARDDAV ^4.0  
+`>=PHP7.2` - `  composer require "cociweb/calendar": "~0.0.8.4"  `  Compatible with RCMCARDDAV ^5.0  
 
 This will download latest release version.  
 It will inject all sql schemas associated with this plugin with the exception of Kolab and LDAP.  
