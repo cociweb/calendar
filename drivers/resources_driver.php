@@ -96,8 +96,8 @@ abstract class resources_driver
                       $event = array(
                           'id'     => sha1($id . $from . $to),
                           'title'  => $rec['name'],
-                          'start'  => new DateTime('@' . $from),
-                          'end'    => new DateTime('@' . $to),
+                          'start'  => new DateTimeImmutable('@' . $from),
+                          'end'    => new DateTimeImmutable('@' . $to),
                           'status' => $fbtypemap[$type],
                           'calendar' => '_resource',
                       );

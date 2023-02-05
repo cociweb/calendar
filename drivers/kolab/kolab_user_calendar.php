@@ -204,25 +204,25 @@ class kolab_user_calendar extends kolab_calendar
    */
   public function list_events($start, $end, $search = null, $virtual = 1, $query = array(), $filter_query = null)
   {
-    // convert to DateTime for comparisons
+    // convert to DateTimeImmutable for comparisons
     try {
-      $start_dt = new DateTime('@'.$start);
+      $start_dt = new DateTimeImmutable('@'.$start);
     }
     catch (Exception $e) {
-      $start_dt = new DateTime('@0');
+      $start_dt = new DateTimeImmutable('@0');
     }
     try {
-      $end_dt = new DateTime('@'.$end);
+      $end_dt = new DateTimeImmutable('@'.$end);
     }
     catch (Exception $e) {
-      $end_dt = new DateTime('today +10 years');
+      $end_dt = new DateTimeImmutable('today +10 years');
     }
 
     $limit_changed = null;
     if (!empty($query)) {
       foreach ($query as $q) {
         if ($q[0] == 'changed' && $q[1] == '>=') {
-          try { $limit_changed = new DateTime('@'.$q[2]); }
+          try { $limit_changed = new DateTimeImmutable('@'.$q[2]); }
           catch (Exception $e) { /* ignore */ }
         }
       }
@@ -343,7 +343,7 @@ class kolab_user_calendar extends kolab_calendar
           $event = array(
             'uid'       => md5($this->id . $from->format('U') . '/' . $to->format('U')),
             'calendar'  => $this->id,
-            'changed'   => $fb['created'] ?: new DateTime(),
+            'changed'   => $fb['created'] ?: new DateTimeImmutable(),
             'title'     => $this->get_name() . ' ' . ($titlemap[$type] ?: $type),
             'start'     => $from,
             'end'       => $to,

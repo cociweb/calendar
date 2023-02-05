@@ -51,7 +51,7 @@ class calendar_recurrence extends libcalendaring_recurrence
   /**
    * Alias of libcalendaring_recurrence::next()
    *
-   * @return mixed DateTime object or False if recurrence ended
+   * @return mixed DateTimeImmutable object or False if recurrence ended
    */
   public function next_start()
   {

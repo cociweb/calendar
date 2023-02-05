@@ -216,7 +216,7 @@ class kolab_calendar extends kolab_storage_folder_api
         else if (is_array($master['recurrence'])) {
           // For performance reasons we'll get only the specific instance
           if (($date = substr($id, strlen($master_id) + 1, 8)) && strlen($date) == 8 && is_numeric($date)) {
-            $start_date = new DateTime($date . 'T000000', $master['start']->getTimezone());
+            $start_date = new DateTimeImmutable($date . 'T000000', $master['start']->getTimezone());
           }
 
           $this->get_recurring_events($record, $start_date ?: $master['start'], null, $id, 1);
@@ -260,20 +260,20 @@ class kolab_calendar extends kolab_storage_folder_api
    */
   public function list_events($start, $end, $search = null, $virtual = 1, $query = array(), $filter_query = null)
   {
-    // convert to DateTime for comparisons
+    // convert to DateTimeImmutable for comparisons
     // #5190: make the range a little bit wider
     // to workaround possible timezone differences
     try {
-      $start = new DateTime('@' . ($start - 12 * 3600));
+      $start = new DateTimeImmutable('@' . ($start - 12 * 3600));
     }
     catch (Exception $e) {
-      $start = new DateTime('@0');
+      $start = new DateTimeImmutable('@0');
     }
     try {
-      $end = new DateTime('@' . ($end + 12 * 3600));
+      $end = new DateTimeImmutable('@' . ($end + 12 * 3600));
     }
     catch (Exception $e) {
-      $end = new DateTime('today +10 years');
+      $end = new DateTimeImmutable('today +10 years');
     }
 
     // get email addresses of the current user
@@ -417,16 +417,16 @@ class kolab_calendar extends kolab_storage_folder_api
    */
   public function count_events($start, $end = null, $filter_query = null)
   {
-    // convert to DateTime for comparisons
+    // convert to DateTimeImmutable for comparisons
     try {
-      $start = new DateTime('@'.$start);
+      $start = new DateTimeImmutable('@'.$start);
     }
     catch (Exception $e) {
-      $start = new DateTime('@0');
+      $start = new DateTimeImmutable('@0');
     }
     if ($end) {
       try {
-        $end = new DateTime('@'.$end);
+        $end = new DateTimeImmutable('@'.$end);
       }
       catch (Exception $e) {
         $end = null;
@@ -608,8 +608,8 @@ class kolab_calendar extends kolab_storage_folder_api
    * Create instances of a recurring event
    *
    * @param array    $event    Hash array with event properties
-   * @param DateTime $start    Start date of the recurrence window
-   * @param DateTime $end      End date of the recurrence window
+   * @param DateTimeImmutable $start    Start date of the recurrence window
+   * @param DateTimeImmutable $end      End date of the recurrence window
    * @param string   $event_id ID of a specific recurring event instance
    * @param int      $limit    Max. number of instances to return
    *
@@ -629,7 +629,7 @@ class kolab_calendar extends kolab_storage_folder_api
     // determine a reasonable end date if none given
     if (!$end) {
       $end = clone $event['start'];
-      $end->add(new DateInterval('P100Y'));
+      $end = $end->add(new DateInterval('P100Y'));
     }
 
     // copy the recurrence rule from the master event (to be used in the UI)
@@ -781,7 +781,7 @@ class kolab_calendar extends kolab_storage_folder_api
     if (!$noinst && $record['recurrence'] && !$record['recurrence_id'] && !$record['_instance']) {
       $record['_instance'] = $record['start']->format($recurrence_id_format);
     }
-    else if (is_a($record['recurrence_date'], 'DateTime')) {
+    else if (is_a($record['recurrence_date'], 'DateTimeImmutable')) {
       $record['_instance'] = $record['recurrence_date']->format($recurrence_id_format);
     }
 
