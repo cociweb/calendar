@@ -419,7 +419,7 @@ class database_driver extends calendar_driver
                     if ($master['id'] != $event['id']) {
                         // set until-date on master event, then save this instance as new recurring event
                         $master['recurrence']['UNTIL'] = clone $event['start'];
-                        $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
+                        $master['recurrence']['UNTIL'] = $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
                         unset($master['recurrence']['COUNT']);
                         $update_master = true;
 
@@ -469,7 +469,7 @@ class database_driver extends calendar_driver
                     if ($diff && ($old_start_date == $new_start_date || $old_duration == $new_duration)) {
                         $event['start'] = $master['start']->add($old['start']->diff($event['start']));
                         $event['end']   = clone $event['start'];
-                        $event['end']->add(new DateInterval('PT'.$new_duration.'S'));
+                        $event['end'] = $event['end']->add(new DateInterval('PT'.$new_duration.'S'));
                     }
                     // dates did not change, use the ones from master
                     else if ($new_start_date . $new_start_time == $old_start_date . $old_start_time) {
@@ -486,7 +486,7 @@ class database_driver extends calendar_driver
 
                         foreach ($exceptions as $exception) {
                             $recurrence_id = rcube_utils::anytodatetime($exception['_instance'], $old['start']->getTimezone($tz));
-                            if (is_a($recurrence_id, 'DateTime')) {
+                            if (is_a($recurrence_id, 'DateTimeImmutable')) {
                                 $recurrence_id->add($date_shift);
                                 $exception['_instance'] = $recurrence_id->format($recurrence_id_format);
                                 $this->_update_event($exception, false);
@@ -585,7 +585,7 @@ class database_driver extends calendar_driver
             $a = $old[$prop];
             $b = $event[$prop];
 
-            if ($event['allday'] && ($prop == 'start' || $prop == 'end') && $a instanceof DateTime && $b instanceof DateTime) {
+            if ($event['allday'] && ($prop == 'start' || $prop == 'end') && $a instanceof DateTimeImmutable && $b instanceof DateTimeImmutable) {
                 $a = $a->format('Y-m-d');
                 $b = $b->format('Y-m-d');
             }
@@ -689,7 +689,7 @@ class database_driver extends calendar_driver
      */
     private function _get_notification($event)
     {
-        if ($event['valarms'] && $event['start'] > new DateTime()) {
+        if ($event['valarms'] && $event['start'] > new DateTimeImmutable()) {
             $alarm = libcalendaring::get_next_alarm($event);
 
             if ($alarm['time'] && in_array($alarm['action'], $this->alarm_types)) {
@@ -714,7 +714,7 @@ class database_driver extends calendar_driver
         );
 
         foreach ($set_cols as $col) {
-            if (is_object($event[$col]) && is_a($event[$col], 'DateTime')) {
+            if (is_object($event[$col]) && is_a($event[$col], 'DateTimeImmutable')) {
                 $sql_args[$col] = $event[$col]->format(self::DB_DATE_FORMAT);
             }
             else if (is_array($event[$col])) {
@@ -972,7 +972,7 @@ class database_driver extends calendar_driver
                 if ($master['id'] != $event['id']) {
                     // set until-date on master event
                     $master['recurrence']['UNTIL'] = clone $event['start'];
-                    $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
+                    $master['recurrence']['UNTIL'] = $master['recurrence']['UNTIL']->sub(new DateInterval('P1D'));
                     unset($master['recurrence']['COUNT']);
                     $update_master = true;
 
@@ -1185,11 +1185,11 @@ class database_driver extends calendar_driver
         $sensitivity_map = array_flip($this->sensitivity_map);
 
         $event['id']            = $event['event_id'];
-        $event['start']         = new DateTime($event['start']);
-        $event['end']           = new DateTime($event['end']);
+        $event['start']         = new DateTimeImmutable($event['start']);
+        $event['end']           = new DateTimeImmutable($event['end']);
         $event['allday']        = intval($event['all_day']);
-        $event['created']       = new DateTime($event['created']);
-        $event['changed']       = new DateTime($event['changed']);
+        $event['created']       = new DateTimeImmutable($event['created']);
+        $event['changed']       = new DateTimeImmutable($event['changed']);
         $event['free_busy']     = $free_busy_map[$event['free_busy']];
         $event['sensitivity']   = $sensitivity_map[$event['sensitivity']];
         $event['calendar']      = $event['calendar_id'];
@@ -1463,7 +1463,7 @@ class database_driver extends calendar_driver
     private function serialize_alarms($valarms)
     {
         foreach ((array)$valarms as $i => $alarm) {
-            if ($alarm['trigger'] instanceof DateTime) {
+            if ($alarm['trigger'] instanceof DateTimeImmutable) {
                 $valarms[$i]['trigger'] = '@' . $alarm['trigger']->format('c');
             }
         }
@@ -1482,7 +1482,7 @@ class database_driver extends calendar_driver
             foreach ($valarms as $i => $alarm) {
                 if ($alarm['trigger'][0] == '@') {
                     try {
-                        $valarms[$i]['trigger'] = new DateTime(substr($alarm['trigger'], 1));
+                        $valarms[$i]['trigger'] = new DateTimeImmutable(substr($alarm['trigger'], 1));
                     }
                     catch (Exception $e) {
                         unset($valarms[$i]);

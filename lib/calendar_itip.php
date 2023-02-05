@@ -99,7 +99,7 @@ class calendar_itip extends libcalendaring_itip
           $this->sender = $attendee;
         }
       }
-      $invitation['event']['changed'] = new DateTime();
+      $invitation['event']['changed'] = new DateTimeImmutable();
       
       // send iTIP REPLY message to organizer
       if ($organizer) {
