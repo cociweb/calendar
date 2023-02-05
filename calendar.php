@@ -3193,7 +3193,7 @@ if(count($cals) > 0){
       if ($ical_objects->method) {
         $append   = '';
         $date_str = $this->rc->format_date($event['start'], $this->rc->config->get('date_format'), empty($event['start']->_dateonly));
-        $date     = new DateTimeImmutable($event['start']->format('Y-m-d') . ' 12:00:00', new DateTimeImmutableZone('UTC'));
+        $date     = new DateTimeImmutable($event['start']->format('Y-m-d') . ' 12:00:00', new DateTimeZone('UTC'));
 
         // prepare a small agenda preview to be filled with actual event data on async request
         if ($ical_objects->method == 'REQUEST') {

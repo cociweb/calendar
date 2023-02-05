@@ -75,7 +75,7 @@ class caldav_driver extends calendar_driver
     {
         $this->cal = $cal;
         $this->rc = $cal->rc;
-        $this->server_timezone = new DateTimeImmutableZone(date_default_timezone_get());
+        $this->server_timezone = new DateTimeZone(date_default_timezone_get());
 
         // encrypted with your Roundcube user password using RC's default des_key
         $rcmail = rcmail::get_instance();
