@@ -44,7 +44,6 @@ class caldav_client extends Sabre\DAV\Client
      */
     public function __construct($uri, $user = null, $pass = null)
     {
-
         // Include libvcalendar on demand ...
         if(!class_exists("libvcalendar"))
             require_once (dirname(__FILE__).'/../../libcalendaring/libvcalendar.php');
@@ -52,8 +51,10 @@ class caldav_client extends Sabre\DAV\Client
         $this->libvcal = new libvcalendar();
 
         $tokens = parse_url($uri);
-        $this->base_uri = $tokens['scheme']."://".$tokens['host'].($tokens['port'] ? ":".$tokens['port'] : null);
-        $this->path = $tokens['path'].($tokens['query'] ? "?".$tokens['query'] : null);
+        $port = isset($tokens['port']) ? ":".$tokens['port'] : '';
+        $query = isset($tokens['query']) ? "?".$tokens['query'] : '';
+        $this->base_uri = $tokens['scheme']."://".$tokens['host'].$port;
+        $this->path = $tokens['path'].$query;
 
         $settings = array(
             'baseUri' => $this->base_uri,
