@@ -13,7 +13,7 @@ CREATE TABLE calendar_oauth_states (
   scope varchar(255) NOT NULL,
   issue_time INTEGER NOT NULL,
   state varchar(255) NOT NULL,
-  UNIQUE (provider(50), `client_config_id`(50), `user_id`(50), `scope`(50)),
+  UNIQUE (provider, client_config_id, user_id, scope),
   PRIMARY KEY (state)
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
@@ -26,7 +26,7 @@ CREATE TABLE calendar_oauth_access_tokens (
   access_token varchar(255) NOT NULL,
   token_type varchar(255) NOT NULL,
   expires_in INTEGER DEFAULT NULL,
-  UNIQUE (provider(50), `client_config_id`(50), `user_id`(50), `scope`(50))
+  UNIQUE (provider, client_config_id, user_id, scope)
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
 CREATE TABLE calendar_oauth_refresh_tokens (
@@ -36,7 +36,7 @@ CREATE TABLE calendar_oauth_refresh_tokens (
   scope varchar(255) NOT NULL,
   issue_time INTEGER NOT NULL,
   refresh_token varchar(255) DEFAULT NULL,
-  UNIQUE (provider(50), `client_config_id`(50), `user_id`(50), `scope`(50))
+  UNIQUE (provider, client_config_id, user_id, scope)
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
 CREATE SEQUENCE caldav_calendars_seq;
@@ -48,7 +48,7 @@ CREATE TABLE caldav_calendars (
   color varchar(8) NOT NULL,
   showalarms smallint NOT NULL DEFAULT '1',
   caldav_url varchar(1000) DEFAULT NULL,
-  caldav_tag varchar(32) CHARACTER SET utf8mb4 NULL DEFAULT 'COLLATE',
+  caldav_tag varchar(32) DEFAULT 'COLLATE',
   caldav_user varchar(1000) DEFAULT NULL,
   caldav_pass varchar(1000) DEFAULT NULL,
   caldav_oauth_provider bytea DEFAULT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE caldav_events (
   changed timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
   sequence int CHECK (sequence > 0) NOT NULL DEFAULT '0',
   start timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
-  end timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
+  "end" timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
   recurrence varchar(255) DEFAULT NULL,
   title bytea NOT NULL,
   description bytea NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE caldav_events (
   attendees text DEFAULT NULL,
   notifyat timestamp(0) DEFAULT NULL,
   caldav_url varchar(1000) NOT NULL,
-  caldav_tag varchar(32) CHARACTER SET utf8mb4 NULL DEFAULT 'COLLATE',
+  caldav_tag varchar(32) DEFAULT 'COLLATE',
   caldav_last_change timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY(event_id)
@@ -113,7 +113,7 @@ CREATE TABLE caldav_attachments (
   filename varchar(255) NOT NULL DEFAULT '',
   mimetype varchar(255) NOT NULL DEFAULT '',
   size int NOT NULL DEFAULT '0',
-  data MEDIUMBLOB,
+  data bytea,
   
   PRIMARY KEY(attachment_id),
   CONSTRAINT fk_caldav_attachments_event_id FOREIGN KEY (event_id)
@@ -149,7 +149,7 @@ CREATE TABLE database_events (
   changed timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
   sequence int CHECK (sequence > 0) NOT NULL DEFAULT '0',
   start timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
-  end timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
+  "end" timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
   recurrence varchar(255) DEFAULT NULL,
   title varchar(255) NOT NULL,
   description text NOT NULL,
@@ -182,7 +182,7 @@ CREATE TABLE database_attachments (
   filename varchar(255) NOT NULL DEFAULT '',
   mimetype varchar(255) NOT NULL DEFAULT '',
   size int NOT NULL DEFAULT '0',
-  data longtext NOT NULL,
+  data text NOT NULL,
   PRIMARY KEY(attachment_id),
   CONSTRAINT fk_attachments_event_id FOREIGN KEY (event_id)
     REFERENCES database_events(event_id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -201,7 +201,7 @@ CREATE TABLE itipinvitations (
     REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-CREATE INDEX uid_idx ON itipinvitations (user_id,event_uid);
+CREATE INDEX iti_uid_idx ON itipinvitations (user_id,event_uid);
 
 CREATE SEQUENCE ical_calendars_seq;
 
@@ -238,7 +238,7 @@ CREATE TABLE ical_events (
   changed timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
   sequence int CHECK (sequence > 0) NOT NULL DEFAULT '0',
   start timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
-  end timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
+  "end" timestamp(0) NOT NULL DEFAULT '1000-01-01 00:00:00',
   recurrence varchar(255) DEFAULT NULL,
   title bytea NOT NULL,
   description bytea NOT NULL,
@@ -275,10 +275,10 @@ CREATE TABLE ical_attachments (
   filename varchar(255) NOT NULL DEFAULT '',
   mimetype varchar(255) NOT NULL DEFAULT '',
   size int NOT NULL DEFAULT '0',
-  data longtext NOT NULL,
+  da NOT NULL,
   PRIMARY KEY(attachment_id),
   CONSTRAINT fk_ical_attachments_event_id FOREIGN KEY (event_id)
   REFERENCES ical_events(event_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) /*!40000 ENGINE=INNODB */ /*!40101 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
-REPLACE INTO `system` (name, value) SELECT ('calendar-version', '2020081200');
+INSERT INTO system (name, value) VALUES ('calendar-version', '2020081200') ON CONFLICT (name) DO UPDATE;
