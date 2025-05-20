@@ -585,29 +585,29 @@ class caldav_driver extends calendar_driver
             $this->rc->db->now(),
             $this->rc->db->now()
         ),
-            $event['calendar'],
-            strval($event['uid']),
-            intval($event['recurrence_id']),
-            strval($event['_instance']),
-            intval($event['isexception']),
-            $event['start']->format(self::DB_DATE_FORMAT),
-            $event['end']->format(self::DB_DATE_FORMAT),
-            intval($event['all_day']),
-            $event['_recurrence'],
-            strval($event['title']),
-            strval($event['description']),
-            strval($event['location']),
-            join(',', (array)$event['categories']),
-            strval($event['url']),
-            intval($event['free_busy']),
-            intval($event['priority']),
-            intval($event['sensitivity']),
-            strval($event['status']),
-            $event['attendees'],
-            $event['alarms'],
-            $event['notifyat'],
-            $event['caldav_url'],
-            $event['caldav_tag']
+	$event['calendar'] ?? '',
+	strval($event['uid'] ?? ''),
+	intval($event['recurrence_id'] ?? 0),
+	strval($event['_instance'] ?? ''),
+	intval($event['isexception'] ?? 0),
+	$event['start']->format(self::DB_DATE_FORMAT),
+	$event['end']->format(self::DB_DATE_FORMAT),
+	intval($event['all_day'] ?? 0),
+	$event['_recurrence'] ?? [],
+	strval($event['title'] ?? ''),
+	strval($event['description'] ?? ''),
+	strval($event['location'] ?? ''),
+	join(',', (array)($event['categories'] ?? [])),
+	strval($event['url'] ?? ''),
+	intval($event['free_busy'] ?? 0),
+	intval($event['priority'] ?? 0),
+	intval($event['sensitivity'] ?? 0),
+	strval($event['status'] ?? ''),
+	$event['attendees'] ?? [],
+	$event['alarms'] ?? [],
+	$event['notifyat'] ?? null,
+	$event['caldav_url'] ?? '',
+	$event['caldav_tag'] ?? ''
         );
         $event_id = $this->rc->db->insert_id($this->db_events);
         if ($event_id) {
@@ -927,8 +927,8 @@ class caldav_driver extends calendar_driver
         // compose vcalendar-style recurrencue rule from structured data
         $rrule = $event['recurrence'] ? libcalendaring::to_rrule($event['recurrence']) : '';
         $event['_recurrence'] = rtrim($rrule, ';');
-        $event['free_busy'] = intval($this->free_busy_map[strtolower($event['free_busy'])]);
-        $event['sensitivity'] = intval($this->sensitivity_map[strtolower($event['sensitivity'])]);
+        $event['free_busy'] = intval($this->free_busy_map[strtolower($event['free_busy'] ?? '')] ?? 0);
+	$event['sensitivity'] = intval($this->sensitivity_map[strtolower($event['sensitivity'] ?? '')] ?? 0);
         if ($event['free_busy'] == 'tentative') {
             $event['status'] = 'TENTATIVE';
         }
@@ -937,9 +937,9 @@ class caldav_driver extends calendar_driver
         }
         // compute absolute time to notify the user
         $event['notifyat'] = $this->_get_notification($event);
-        if (is_array($event['valarms'])) {
-            $event['alarms'] = $this->serialize_alarms($event['valarms']);
-        }
+	if (isset($event['valarms']) && is_array($event['valarms'])) {
+	    $event['alarms'] = $this->serialize_alarms($event['valarms']);
+	}
         // process event attendees
         if (!empty($event['attendees']))
             $event['attendees'] = json_encode((array)$event['attendees']);
@@ -952,10 +952,11 @@ class caldav_driver extends calendar_driver
      */
     private function _get_notification($event)
     {
-        if ($event['valarms'] && $event['start'] > new DateTimeImmutable()) {
-            $alarm = libcalendaring::get_next_alarm($event);
-            if ($alarm['time'] && in_array($alarm['action'], $this->alarm_types))
-                return date('Y-m-d H:i:s', $alarm['time']);
+        if (!empty($event['valarms']) && $event['start'] > new DateTimeImmutable()) {
+    	    $alarm = libcalendaring::get_next_alarm($event);
+	    if (!empty($alarm['time']) && in_array($alarm['action'], $this->alarm_types)) {
+	        return date('Y-m-d H:i:s', $alarm['time']);
+	    }
         }
         return null;
     }
