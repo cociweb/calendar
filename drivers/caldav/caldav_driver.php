@@ -603,8 +603,8 @@ class caldav_driver extends calendar_driver
 	intval($event['priority'] ?? 0),
 	intval($event['sensitivity'] ?? 0),
 	strval($event['status'] ?? ''),
-	$event['attendees'] ?? [],
-	$event['alarms'] ?? [],
+	$event['attendees'] ?? '', // Should be a string (JSON or empty) after _save_preprocess
+	$event['alarms'] ?? null,  // Pass null if alarms are not set, so DB gets SQL NULL
 	$event['notifyat'] ?? null,
 	$event['caldav_url'] ?? '',
 	$event['caldav_tag'] ?? ''
@@ -1323,6 +1323,7 @@ class caldav_driver extends calendar_driver
     private function _db_load_events($start, $end, $query = null, $calendars = null, $virtual = 1, $modifiedsince = null)
     {
         if (empty($calendars))
+            $sql_add = ''; // Initialize $sql_add
             $calendars = array_keys($this->calendars);
         else if (!is_array($calendars))
             $calendars = explode(',', strval($calendars));

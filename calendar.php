@@ -59,6 +59,7 @@ class calendar extends rcube_plugin
     'calendar_allow_invite_shared' => false,
     'calendar_itip_send_option'    => 3,
     'calendar_itip_after_action'   => 0,
+    'calendar_show_weekno'         => 0, // Default to datepicker only, addresses undefined key warning
   );
 
 // These are implemented with __get()
@@ -131,7 +132,7 @@ class calendar extends rcube_plugin
     $this->setup();
 
     // load Calendar user interface
-    if (!$this->rc->output->ajax_call && (!$this->rc->output->env['framed'] || $args['action'] == 'preview')) {
+    if (!$this->rc->output->ajax_call && (!($this->rc->output->env['framed'] ?? false) || $args['action'] == 'preview')) {
       $this->ui->init();
 
       // settings are required in (almost) every GUI step
@@ -174,7 +175,8 @@ class calendar extends rcube_plugin
       $this->add_hook('refresh', array($this, 'refresh'));
 
       // remove undo information...
-      if ($undo = $_SESSION['calendar_event_undo']) {
+      $undo = $_SESSION['calendar_event_undo'] ?? null;
+      if ($undo) {
         // ...after timeout
         $undo_time = $this->rc->config->get('undo_timeout', 0);
         if ($undo['ts'] < time() - $undo_time) {
@@ -1626,6 +1628,7 @@ if(count($cals) > 0){
     // don't update session on these requests (avoiding race conditions)
     $this->rc->session->nowrite = true;
 
+    $counts = []; // Initialize $counts as an array
     $start = rcube_utils::get_input_value('start', rcube_utils::INPUT_GET);
     if (!$start) {
       $start = new DateTimeImmutable('today 00:00:00', $this->timezone);
@@ -2083,14 +2086,29 @@ if(count($cals) > 0){
 
     // get user identity to create default attendee
     if ($this->ui->screen == 'calendar') {
-      foreach ($this->rc->user->list_emails() as $rec) {
-        if (!$identity)
-          $identity = $rec;
-        $identity['emails'][] = $rec['email'];
-        $settings['identities'][$rec['identity_id']] = $rec['email'];
+      $identity = null; // Initialize $identity
+      $user_emails_list = $this->rc->user->list_emails();
+      if (!empty($user_emails_list)) {
+          foreach ($user_emails_list as $rec) {
+              if (!$identity) {
+                  $identity = $rec;
+                  // Ensure 'emails' key exists and is an array if we are about to append to it
+                  if (!isset($identity['emails']) || !is_array($identity['emails'])) {
+                      $identity['emails'] = [];
+                  }
+              }
+              $identity['emails'][] = $rec['email'];
+              $settings['identities'][$rec['identity_id']] = $rec['email'];
+          }
+          if ($identity) { // Check if identity was found
+              $identity['emails'][] = $this->rc->user->get_username();
+              $settings['identity'] = array(
+                  'name' => $identity['name'] ?? '',
+                  'email' => strtolower($identity['email'] ?? ''),
+                  'emails' => ';' . strtolower(join(';', $identity['emails'] ?? []))
+              );
+          }
       }
-      $identity['emails'][] = $this->rc->user->get_username();
-      $settings['identity'] = array('name' => $identity['name'], 'email' => strtolower($identity['email']), 'emails' => ';' . strtolower(join(';', $identity['emails'])));
     }
 
     // freebusy token authentication URL

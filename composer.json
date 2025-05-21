@@ -4,7 +4,7 @@
 	"description": "CalDav Capable Calendar plugin for Roundcube and Nextcloud",
 	"homepage": "https://github.com/cociweb/calendar",
 	"license": "GPL-3.0",
-	"version": "0.0.9.0",
+	"version": "0.0.9.1",
 	"authors": [
 		{
 			"name": "Gene Hawkins",
@@ -30,9 +30,9 @@
 		}
 	],
 	"require": {
-		"php": ">=7.1.0",
+		"php": ">=7.2.0",
 		"roundcube/plugin-installer": "*",
-		"cociweb/libcalendaring": "3.6.0",
+		"cociweb/libcalendaring": "3.6.1",
 		"texxasrulez/libkolab": "*",
 		"sabre/dav": "*",
 		"league/oauth2-client": "*",

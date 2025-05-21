@@ -29,7 +29,7 @@ Thank you for listening to this old mans ramblings.
 
 **Installation** 
 
-`>=PHP7.2` - `  composer require "cociweb/calendar": "~0.0.8.5"  `  Compatible with RCMCARDDAV ^5.0  
+`>=PHP7.2` - `  composer require "cociweb/calendar": "~0.0.9.1"  `  Compatible with RCMCARDDAV ^5.0  
 
 This will download latest release version.  
 It will inject all sql schemas associated with this plugin with the exception of Kolab and LDAP.  
