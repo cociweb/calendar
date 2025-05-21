@@ -794,7 +794,9 @@ class calendar extends rcube_plugin
 
       $p['blocks']['view']['options']['show_weekno'] = array(
         'title' => html::label($field_id, rcube::Q($this->gettext('showweekno'))),
-        'content' => $select->show(intval($this->rc->config->get('calendar_show_weekno'))),
+        'content' => $select->show(isset($this->rc->config) && $this->rc->config->get('calendar_show_weekno') !== null
+          ? intval($this->rc->config->get('calendar_show_weekno'))
+          : intval($this->defaults['calendar_show_weekno'])),
       );
     }
 

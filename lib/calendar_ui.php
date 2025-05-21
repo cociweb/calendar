@@ -220,7 +220,7 @@ class calendar_ui
     }
 
     foreach ((array)$calendars as $id => $prop) {
-      if (!empty($attrib['activeonly']) && !$prop['active'])
+      if ($attrib['activeonly'] && !$prop['active'])
         continue;
 
       $html .= html::tag('li', array('id' => 'rcmlical' . $id, 'class' => $prop['group']),
@@ -289,25 +289,19 @@ class calendar_ui
     }
 
     $classes = array('calendar', 'cal-'  . asciiwords($id, true));
-    $title = isset($prop['title']) ? $prop['title'] : '';
+    $title = $prop['title'] ?: ($prop['name'] != $prop['listname'] || strlen($prop['name']) > 25 ?
+      html_entity_decode($prop['name'], ENT_COMPAT, RCUBE_CHARSET) : '');
 
-    $virtual = !empty($prop['virtual']);
-    $readonly = !$prop['editable'];
-    $subscribed = !empty($prop['subscribed']);
-    $class = isset($prop['class']) ? $prop['class'] : '';
-    $editname = isset($prop['editname']) ? $prop['editname'] : '';
-    $removable = !empty($prop['removable']);
-
-    if ($virtual)
+    if ($prop['virtual'])
       $classes[] = 'virtual';
-    else if ($readonly)
+    else if (!$prop['editable'])
       $classes[] = 'readonly';
-    if ($subscribed)
+    if ($prop['subscribed'])
       $classes[] = 'subscribed';
     if ($prop['subscribed'] === 2)
       $classes[] = 'partial';
-    if ($class)
-      $classes[] = $class;
+    if ($prop['class'])
+      $classes[] = $prop['class'];
 
     $content = '';
     if (!$activeonly || $prop['active']) {
@@ -317,7 +311,7 @@ class calendar_ui
         . ($prop['virtual'] ? '' :
           html::tag('input', array('type' => 'checkbox', 'name' => '_cal[]', 'value' => $id, 'checked' => $prop['active'], 'aria-labelledby' => $label_id)) .
           html::span('actions', 
-            ($removable ? html::a(array('href' => '#', 'class' => 'remove', 'title' => $this->cal->gettext('removelist')), ' ') : '') .
+            ($prop['removable'] ? html::a(array('href' => '#', 'class' => 'remove', 'title' => $this->cal->gettext('removelist')), ' ') : '') .
             html::a(array('href' => '#', 'class' => 'quickview', 'title' => $this->cal->gettext('quickview'), 'role' => 'checkbox', 'aria-checked' => 'false'), '') .
             (isset($prop['subscribed']) ? html::a(array('href' => '#', 'class' => 'subscribed', 'title' => $this->cal->gettext('calendarsubscribe'), 'role' => 'checkbox', 'aria-checked' => $prop['subscribed'] ? 'true' : 'false'), ' ') : '')
           ) .
@@ -584,8 +578,14 @@ class calendar_ui
         $this->cal->gettext('onemonthback'),
         $this->cal->gettext(array('name' => 'nmonthsback', 'vars' => array('nr'=>2))),
         $this->cal->gettext(array('name' => 'nmonthsback', 'vars' => array('nr'=>3))),
-    $startdate = new html_inputfield(array('name' => 'start', 'size' => 11, 'id' => 'event-export-startdate', 'style' => 'display:none'));
+        $this->cal->gettext(array('name' => 'nmonthsback', 'vars' => array('nr'=>6))),
         $this->cal->gettext(array('name' => 'nmonthsback', 'vars' => array('nr'=>12))),
+        $this->cal->gettext('customdate'),
+      ),
+      array(0,'1','2','3','6','12','custom'));
+
+    $startdate = new html_inputfield(array('name' => 'start', 'size' => 11, 'id' => 'event-export-startdate', 'style' => 'display:none'));
+
     $html .= html::div('form-section form-group row',
       html::label(array('for' => 'event-export-range', 'class' => 'col-sm-4 col-form-label'), $this->cal->gettext('exportrange'))
         . html::div('col-sm-8 input-group', $select->show(0) . $startdate->show()));
@@ -593,212 +593,212 @@ class calendar_ui
     $checkbox = new html_checkbox(array('name' => 'attachments', 'id' => 'event-export-attachments', 'value' => 1, 'class' => 'form-check-input pretty-checkbox'));
     $html .= html::div('form-section form-check row',
       html::label(array('for' => 'event-export-attachments', 'class' => 'col-sm-4 col-form-label'), $this->cal->gettext('exportattachments'))
-        . html::div('col-sm-8', $checkbox->show(1)));, 'class' => 'col-sm-4 col-form-label'), $this->cal->gettext('exportrange'))
-        . html::div('col-sm-8 input-group', $select->show(0) . $startdate->show()));
+        . html::div('col-sm-8', $checkbox->show(1)));
+
     $this->rc->output->add_gui_object('exportform', $attrib['id']);
-    $checkbox = new html_checkbox(array('name' => 'attachments', 'id' => 'event-export-attachments', 'value' => 1, 'class' => 'form-check-input pretty-checkbox'));
-    return html::tag('form', $attrib + array(ck row',
-        'action' => $this->rc->url(array('task' => 'calendar', 'action' => 'export_events')),bel'), $this->cal->gettext('exportattachments'))
-        'method' => "post",-8', $checkbox->show(1)));
-        'id' => $attrib['id']
-      ),s->rc->output->add_gui_object('exportform', $attrib['id']);
-      $html
-    );turn html::tag('form', $attrib + array(
-  }     'action' => $this->rc->url(array('task' => 'calendar', 'action' => 'export_events')),
+
+    return html::tag('form', $attrib + array(
+        'action' => $this->rc->url(array('task' => 'calendar', 'action' => 'export_events')),
         'method' => "post",
-  /**   'id' => $attrib['id']
+        'id' => $attrib['id']
+      ),
+      $html
+    );
+  }
+
+  /**
    * Handler for calendar form template.
    * The form content could be overriden by the driver
-   */;
+   */
   function calendar_editform($action, $calendar = array())
   {
     $this->action   = $action;
-    $this->calendar = $calendar;emplate.
-   * The form content could be overriden by the driver
+    $this->calendar = $calendar;
+
     // load miniColors js/css files
-    jqueryui::miniColors();m($action, $calendar = array())
-  {
+    jqueryui::miniColors();
+
     $this->rc->output->set_env('pagetitle', $this->cal->gettext('calendarprops'));
     $this->rc->output->add_handler('folderform', array($this, 'calendarform'));
     $this->rc->output->send('libkolab.folderform');
-  } // load miniColors js/css files
-    jqueryui::miniColors();
+  }
+
   /**
-   * Handler for calendar form template.e', $this->cal->gettext('calendarprops'));
-   * The form content could be overriden by the driver($this, 'calendarform'));
-   */this->rc->output->send('libkolab.folderform');
+   * Handler for calendar form template.
+   * The form content could be overriden by the driver
+   */
   function calendarform($attrib)
   {
     // compose default calendar form fields
     $input_name  = new html_inputfield(array('name' => 'name', 'id' => 'calendar-name', 'size' => 20));
     $input_color = new html_inputfield(array('name' => 'color', 'id' => 'calendar-color', 'size' => 7, 'class' => 'colors'));
-   */
-    $formfields = array($attrib)
+
+    $formfields = array(
       'name' => array(
         'label' => $this->cal->gettext('name'),
-        'value' => $input_name->show($calendar['name']),name', 'id' => 'calendar-name', 'size' => 20));
-        'id'    => 'calendar-name',eld(array('name' => 'color', 'id' => 'calendar-color', 'size' => 7, 'class' => 'colors'));
+        'value' => $input_name->show($calendar['name']),
+        'id'    => 'calendar-name',
       ),
-      'color' => array((
+      'color' => array(
         'label' => $this->cal->gettext('color'),
         'value' => $input_color->show($calendar['color']),
-        'id'    => 'calendar-color',($calendar['name']),
-      ),'id'    => 'calendar-name',
-    );),
-      'color' => array(
-    if ($this->cal->driver->alarms) {t('color'),
+        'id'    => 'calendar-color',
+      ),
+    );
+
+    if ($this->cal->driver->alarms) {
       $checkbox = new html_checkbox(array('name' => 'showalarms', 'id' => 'calendar-showalarms', 'value' => 1));
       $formfields['showalarms'] = array(
         'label' => $this->cal->gettext('showalarms'),
         'value' => $checkbox->show($this->calendar['showalarms'] ? 1 :0),
         'id'    => 'calendar-showalarms',
-      );$this->cal->driver->alarms) {
-    } $checkbox = new html_checkbox(array('name' => 'showalarms', 'id' => 'calendar-showalarms', 'value' => 1));
-      $formfields['showalarms'] = array(
+      );
+    }
+
     // allow driver to extend or replace the form content
     return html::tag('form', $attrib + array('action' => "#", 'method' => "get", 'id' => 'calendarpropform'),
       $this->cal->driver->calendar_form($this->action, $this->calendar, $formfields)
-    ););
-  } }
+    );
+  }
 
-  /**/ allow driver to extend or replace the form content
-   *return html::tag('form', $attrib + array('action' => "#", 'method' => "get", 'id' => 'calendarpropform'),
-   */ $this->cal->driver->calendar_form($this->action, $this->calendar, $formfields)
+  /**
+   *
+   */
   function attendees_list($attrib = array())
   {
     // add "noreply" checkbox to attendees table only
     $invitations = strpos($attrib['id'], 'attend') !== false;
-   *
+
     $invite = new html_checkbox(array('value' => 1, 'id' => 'edit-attendees-invite'));
     $table  = new html_table(array('cols' => 5 + intval($invitations), 'border' => 0, 'cellpadding' => 0, 'class' => 'rectable'));
-  {
+
     $table->add_header('role', $this->cal->gettext('role'));
     $table->add_header('name', $this->cal->gettext($attrib['coltitle'] ?: 'attendee'));
     $table->add_header('availability', $this->cal->gettext('availability'));
-    $table->add_header('confirmstate', $this->cal->gettext('confirmstate'));invite'));
-    if ($invitations) {table(array('cols' => 5 + intval($invitations), 'border' => 0, 'cellpadding' => 0, 'class' => 'rectable'));
+    $table->add_header('confirmstate', $this->cal->gettext('confirmstate'));
+    if ($invitations) {
       $table->add_header(array('class' => 'invite', 'title' => $this->cal->gettext('sendinvitations')),
         $invite->show(1) . html::label('edit-attendees-invite', html::span('inner', $this->cal->gettext('sendinvitations'))));
-    }table->add_header('name', $this->cal->gettext($attrib['coltitle'] ?: 'attendee'));
-    $table->add_header('options', ''); $this->cal->gettext('availability'));
-    $table->add_header('confirmstate', $this->cal->gettext('confirmstate'));
+    }
+    $table->add_header('options', '');
+
     // hide invite column if disabled by config
     $itip_notify = (int)$this->rc->config->get('calendar_itip_send_option', $this->cal->defaults['calendar_itip_send_option']);
-    if ($invitations && !($itip_notify & 2)) {ttendees-invite', html::span('inner', $this->cal->gettext('sendinvitations'))));
+    if ($invitations && !($itip_notify & 2)) {
         $css = sprintf('#%s td.invite, #%s th.invite { display:none !important }', $attrib['id'], $attrib['id']);
         $this->rc->output->add_footer(html::tag('style', array('type' => 'text/css'), $css));
     }
-    // hide invite column if disabled by config
-    return $table->show($attrib);->config->get('calendar_itip_send_option', $this->cal->defaults['calendar_itip_send_option']);
-  } if ($invitations && !($itip_notify & 2)) {
-        $css = sprintf('#%s td.invite, #%s th.invite { display:none !important }', $attrib['id'], $attrib['id']);
-  /**   $this->rc->output->add_footer(html::tag('style', array('type' => 'text/css'), $css));
-   *}
+
+    return $table->show($attrib);
+  }
+
+  /**
+   *
    */
   function attendees_form($attrib = array())
   {
     $input    = new html_inputfield(array('name' => 'participant', 'id' => 'edit-attendee-name', 'class' => 'form-control'));
     $textarea = new html_textarea(array('name' => 'comment', 'id' => 'edit-attendees-comment', 'class' => 'form-control',
         'rows' => 4, 'cols' => 55, 'title' => $this->cal->gettext('itipcommenttitle')));
-   */
-    return html::div($attrib,trib = array())
+
+    return html::div($attrib,
       html::div('form-searchbar', $input->show() . " " .
         html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-attendee-add', 'value' => $this->cal->gettext('addattendee'))) . " " .
         html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-attendee-schedule', 'value' => $this->cal->gettext('scheduletime').'...'))) .
       html::p('attendees-commentbox', html::label('edit-attendees-comment', $this->cal->gettext('itipcomment')) . $textarea->show())
     );
-  } return html::div($attrib,
-      html::div('form-searchbar', $input->show() . " " .
-  /**   html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-attendee-add', 'value' => $this->cal->gettext('addattendee'))) . " " .
-   *    html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-attendee-schedule', 'value' => $this->cal->gettext('scheduletime').'...'))) .
-   */ html::p('attendees-commentbox', html::label('edit-attendees-comment', $this->cal->gettext('itipcomment')) . $textarea->show())
+  }
+
+  /**
+   *
+   */
   function resources_form($attrib = array())
   {
     $input = new html_inputfield(array('name' => 'resource', 'id' => 'edit-resource-name', 'class' => 'form-control'));
-  /**
+
     return html::div($attrib,
       html::div('form-searchbar', $input->show() . " " .
         html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-resource-add', 'value' => $this->cal->gettext('addresource'))) . " " .
         html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-resource-find', 'value' => $this->cal->gettext('findresources').'...')))
-      );ut = new html_inputfield(array('name' => 'resource', 'id' => 'edit-resource-name', 'class' => 'form-control'));
+      );
   }
-    return html::div($attrib,
-  /** html::div('form-searchbar', $input->show() . " " .
-   *    html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-resource-add', 'value' => $this->cal->gettext('addresource'))) . " " .
-   */   html::tag('input', array('type' => 'button', 'class' => 'button', 'id' => 'edit-resource-find', 'value' => $this->cal->gettext('findresources').'...')))
+
+  /**
+   *
+   */
   function resources_list($attrib = array())
   {
     $attrib += array('id' => 'calendar-resources-list');
-  /**
+
     $this->rc->output->add_gui_object('resourceslist', $attrib['id']);
-   */
+
     return html::tag('ul', $attrib, '', html::$common_attrib);
   }
-    $attrib += array('id' => 'calendar-resources-list');
+
   /**
-   *$this->rc->output->add_gui_object('resourceslist', $attrib['id']);
+   *
    */
-  public function resource_info($attrib = array())mon_attrib);
+  public function resource_info($attrib = array())
   {
     $attrib += array('id' => 'calendar-resources-info');
-  /**
+
     $this->rc->output->add_gui_object('resourceinfo', $attrib['id']);
     $this->rc->output->add_gui_object('resourceownerinfo', $attrib['id'] . '-owner');
-  public function resource_info($attrib = array())
+
     // copy address book labels for owner details to client
     $this->rc->output->add_label('name','firstname','surname','department','jobtitle','email','phone','address');
 
     $table_attrib = array('id','class','style','width','summary','cellpadding','cellspacing','border');
-    $this->rc->output->add_gui_object('resourceownerinfo', $attrib['id'] . '-owner');
+
     return html::tag('table', $attrib,
-        html::tag('tbody', null, ''), $table_attrib) .lient
-    $this->rc->output->add_label('name','firstname','surname','department','jobtitle','email','phone','address');
+        html::tag('tbody', null, ''), $table_attrib) .
+
       html::tag('table', array('id' => $attrib['id'] . '-owner', 'style' => 'display:none') + $attrib,
-        html::tag('thead', null,class','style','width','summary','cellpadding','cellspacing','border');
+        html::tag('thead', null,
           html::tag('tr', null,
             html::tag('td', array('colspan' => 2), rcube::Q($this->cal->gettext('resourceowner')))
-          )l::tag('tbody', null, ''), $table_attrib) .
+          )
         ) .
-        html::tag('tbody', null, ''),> $attrib['id'] . '-owner', 'style' => 'display:none') + $attrib,
-        $table_attrib);d', null,
-  }       html::tag('tr', null,
-            html::tag('td', array('colspan' => 2), rcube::Q($this->cal->gettext('resourceowner')))
-  /**     )
-   *    ) .
-   */   html::tag('tbody', null, ''),
+        html::tag('tbody', null, ''),
+        $table_attrib);
+  }
+
+  /**
+   *
+   */
   public function resource_calendar($attrib = array())
   {
     $attrib += array('id' => 'calendar-resources-calendar');
-  /**
+
     $this->rc->output->add_gui_object('resourceinfocalendar', $attrib['id']);
-   */
-    return html::div($attrib, '');r($attrib = array())
+
+    return html::div($attrib, '');
   }
-    $attrib += array('id' => 'calendar-resources-calendar');
+
   /**
-   * GUI object 'searchform' for the resource finder dialog', $attrib['id']);
+   * GUI object 'searchform' for the resource finder dialog
    *
    * @param array Named parameters
    * @return string HTML code for the gui object
    */
   function resources_search_form($attrib)
-  {* GUI object 'searchform' for the resource finder dialog
+  {
     $attrib += array(
         'command'       => 'search-resource',
         'reset-command' => 'reset-resource-search',
         'id'            => 'rcmcalresqsearchbox',
-        'autocomplete'  => 'off',$attrib)
+        'autocomplete'  => 'off',
         'form-name'     => 'rcmcalresoursqsearchform',
         'gui-object'    => 'resourcesearchform',
-    );  'command'       => 'search-resource',
-        'reset-command' => 'reset-resource-search',
-    // add form tag around text fieldqsearchbox',
+    );
+
+    // add form tag around text field
     return $this->rc->output->search_form($attrib);
-  }     'form-name'     => 'rcmcalresoursqsearchform',
-        'gui-object'    => 'resourcesearchform',
-  /**;
+  }
+
+  /**
    *
-   *// add form tag around text field
+   */
   function attendees_freebusy_table($attrib = array())
   {
     $table = new html_table(array('cols' => 2, 'border' => 0, 'cellspacing' => 0));
@@ -807,18 +807,18 @@ class calendar_ui
       html::div('timesheader', '&nbsp;') .
       html::div(array('id' => 'schedule-attendees-list', 'class' => 'attendees-list'), '')
     );
-    $table->add('times',ble(array('cols' => 2, 'border' => 0, 'cellspacing' => 0));
-      html::div('scroll',s',
+    $table->add('times',
+      html::div('scroll',
         html::tag('table', array('id' => 'schedule-freebusy-times', 'border' => 0, 'cellspacing' => 0), html::tag('thead') . html::tag('tbody')) .
         html::div(array('id' => 'schedule-event-time', 'style' => 'display:none'), '&nbsp;')
-      )tml::div(array('id' => 'schedule-attendees-list', 'class' => 'attendees-list'), '')
+      )
     );
-    $table->add('times',
+    
     return $table->show($attrib);
-  }     html::tag('table', array('id' => 'schedule-freebusy-times', 'border' => 0, 'cellspacing' => 0), html::tag('thead') . html::tag('tbody')) .
-        html::div(array('id' => 'schedule-event-time', 'style' => 'display:none'), '&nbsp;')
-  /** )
-   *);
+  }
+
+  /**
+   *
    */
   function event_invitebox($attrib = array())
   {
@@ -826,22 +826,15 @@ class calendar_ui
       return html::div($attrib,
         $this->cal->itip->itip_object_details_table($this->cal->event, $this->cal->itip->gettext('itipinvitation')) .
         $this->cal->invitestatus
-      );on event_invitebox($attrib = array())
+      );
     }
-    if ($this->cal->event) {
-    return '';tml::div($attrib,
-  }     $this->cal->itip->itip_object_details_table($this->cal->event, $this->cal->itip->gettext('itipinvitation')) .
-        $this->cal->invitestatus
-  function event_rsvp_buttons($attrib = array())
-  { }
-    $actions = array('accepted','tentative','declined');
-    if ($attrib['delegate'] !== 'false')
-      $actions[] = 'delegated';
-
-    return $this->cal->itip->itip_rsvp_buttons($attrib, $actions);
+    
+    return '';
   }
+
+  function event_rsvp_buttons($attrib = array())
+  {
     $actions = array('accepted','tentative','declined');
-}   $delegate = isset($prop['delegate']) ? $prop['delegate'] : null;
     if ($attrib['delegate'] !== 'false')
       $actions[] = 'delegated';
 

@@ -574,6 +574,37 @@ class caldav_driver extends calendar_driver
     private function _insert_event(&$event)
     {
         //$event = $this->_save_preprocess($event);
+
+        // Ensure _recurrence is a string
+        $recurrence_str = '';
+        if (isset($event['_recurrence'])) {
+            if (is_array($event['_recurrence'])) {
+                $recurrence_str = libcalendaring::to_rrule($event['_recurrence']);
+            } else {
+                $recurrence_str = (string)$event['_recurrence'];
+            }
+        }
+
+        // Ensure attendees is a string
+        $attendees_str = '';
+        if (isset($event['attendees'])) {
+            if (is_array($event['attendees'])) {
+                $attendees_str = json_encode($event['attendees']);
+            } else {
+                $attendees_str = (string)$event['attendees'];
+            }
+        }
+
+        // Ensure alarms is a string or null
+        $alarms_str = null;
+        if (isset($event['alarms'])) {
+            if (is_array($event['alarms'])) {
+                $alarms_str = json_encode($event['alarms']);
+            } else {
+                $alarms_str = (string)$event['alarms'];
+            }
+        }
+
         $this->rc->db->query(sprintf(
             "INSERT INTO " . $this->db_events . "
        (calendar_id, created, changed, uid, recurrence_id, instance, isexception, %s, %s, all_day, recurrence,
@@ -585,29 +616,29 @@ class caldav_driver extends calendar_driver
             $this->rc->db->now(),
             $this->rc->db->now()
         ),
-	$event['calendar'] ?? '',
-	strval($event['uid'] ?? ''),
-	intval($event['recurrence_id'] ?? 0),
-	strval($event['_instance'] ?? ''),
-	intval($event['isexception'] ?? 0),
-	$event['start']->format(self::DB_DATE_FORMAT),
-	$event['end']->format(self::DB_DATE_FORMAT),
-	intval($event['all_day'] ?? 0),
-	$event['_recurrence'] ?? [],
-	strval($event['title'] ?? ''),
-	strval($event['description'] ?? ''),
-	strval($event['location'] ?? ''),
-	join(',', (array)($event['categories'] ?? [])),
-	strval($event['url'] ?? ''),
-	intval($event['free_busy'] ?? 0),
-	intval($event['priority'] ?? 0),
-	intval($event['sensitivity'] ?? 0),
-	strval($event['status'] ?? ''),
-	$event['attendees'] ?? '', // Should be a string (JSON or empty) after _save_preprocess
-	$event['alarms'] ?? null,  // Pass null if alarms are not set, so DB gets SQL NULL
-	$event['notifyat'] ?? null,
-	$event['caldav_url'] ?? '',
-	$event['caldav_tag'] ?? ''
+            $event['calendar'] ?? '',
+            strval($event['uid'] ?? ''),
+            intval($event['recurrence_id'] ?? 0),
+            strval($event['_instance'] ?? ''),
+            intval($event['isexception'] ?? 0),
+            $event['start']->format(self::DB_DATE_FORMAT),
+            $event['end']->format(self::DB_DATE_FORMAT),
+            intval($event['all_day'] ?? $event['allday'] ?? 0),
+            $recurrence_str,
+            strval($event['title'] ?? ''),
+            strval($event['description'] ?? ''),
+            strval($event['location'] ?? ''),
+            is_array($event['categories'] ?? null) ? implode(',', $event['categories']) : strval($event['categories'] ?? ''),
+            strval($event['url'] ?? ''),
+            intval($event['free_busy'] ?? 0),
+            intval($event['priority'] ?? 0),
+            intval($event['sensitivity'] ?? 0),
+            strval($event['status'] ?? ''),
+            $attendees_str,
+            $alarms_str,
+            $event['notifyat'] ?? null,
+            $event['caldav_url'] ?? '',
+            $event['caldav_tag'] ?? ''
         );
         $event_id = $this->rc->db->insert_id($this->db_events);
         if ($event_id) {
@@ -1539,6 +1570,7 @@ class caldav_driver extends calendar_driver
             " AND calendar_id IN (" . $this->calendar_ids . "))",
             $attachment_id,
             $event_id
+       
         );
         return $this->rc->db->affected_rows($query);
     }
@@ -2016,42 +2048,12 @@ class caldav_driver extends calendar_driver
             isset($props["auth_type"]) ? $props["auth_type"] : null
         );
         $tokens = parse_url($props["caldav_url"]);
-        $base_uri = $tokens['
+        $base_uri = $tokens['scheme'] . '://' . $tokens['host'] . (isset($tokens['port']) ? ':' . $tokens['port'] : '') . '/';
+        $response = $caldav->prop_find($base_uri, $current_user_principal, 0);
+        if (!$response) {
+            $this->_raise_error("Resource \"$base_uri\" contains no calendars.");
+            return false;
         }
-        else if (array_key_exists ('{DAV:}resourcetype', $response) &&
-            $response['{DAV:}resourcetype'] instanceof Sabre\DAV\Xml\Property\ResourceType &&
-            in_array('{urn:ietf:params:xml:ns:caldav}calendar',
-                $response['{DAV:}resourcetype']->getValue())) {
-            $name = '';
-            if (array_key_exists ('{DAV:}displayname', $response)) {
-                $name = $response['{DAV:}displayname'];
-            }
-            if (array_key_exists ('{http://apple.com/ns/ical/}calendar-color', $response)) {
-                $color = $response['{http://apple.com/ns/ical/}calendar-color'];
-				$check_color = explode('#', $color);
-				if (!(array_key_exists(1, $check_color))) 
-				{
-					$color = $check_color[0];
-				} else {
-					$color = $check_color[1];
-				}
-            }
-			// add sync-token var
-			if (array_key_exists ('{DAV:}sync-token', $response)) {
-                $sync_token = $response['{DAV:}sync-token'];
-				$sync_token = explode('/', $sync_token);
-				$sync_token = intval($sync_token[5]);
-            }
-            array_push($calendars, array(
-                'name' => $name,
-                'color' => $color,
-                'href' => $caldav_url,
-				'sync_token' => $sync_token,
-            ));
-            return $calendars;
-            // directly return given url as it is a calendar
-        }
-        // probe further for principal url and user home set
         if (is_array($response[$current_user_principal[0]])) {
 	        $caldav_url = $base_uri . $response[$current_user_principal[0]][0]['value'];
         } else {
