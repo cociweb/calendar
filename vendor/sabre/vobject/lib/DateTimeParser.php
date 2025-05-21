@@ -43,7 +43,8 @@ class DateTimeParser {
         if ($matches[7]==='Z' || is_null($tz)) {
             $tz = new DateTimeZone('UTC');
         }
-        $date = new DateTime($matches[1] . '-' . $matches[2] . '-' . $matches[3] . ' ' . $matches[4] . ':' . $matches[5] .':' . $matches[6]);
+        // PHP7/8: Pass timezone to DateTime constructor
+        $date = new DateTime($matches[1] . '-' . $matches[2] . '-' . $matches[3] . ' ' . $matches[4] . ':' . $matches[5] .':' . $matches[6], $tz);
 
         // Still resetting the timezone, to normalize everything to UTC
         // $date->setTimeZone(new \DateTimeZone('UTC'));
@@ -71,7 +72,8 @@ class DateTimeParser {
             $tz = new DateTimeZone('UTC');
         }
 
-        $date = new DateTime($matches[1] . '-' . $matches[2] . '-' . $matches[3]);
+        // PHP7/8: Pass timezone to DateTime constructor
+        $date = new DateTime($matches[1] . '-' . $matches[2] . '-' . $matches[3], $tz);
         return $date;
 
     }
@@ -180,9 +182,10 @@ class DateTimeParser {
      */
     static public function parse($date, $referenceTz = null) {
 
-        if ($date[0]==='P' || ($date[0]==='-' && $date[1]==='P')) {
+        // PHP7/8: Check string length before accessing offset
+        if (is_string($date) && strlen($date) && ($date[0]==='P' || ($date[0]==='-' && isset($date[1]) && $date[1]==='P'))) {
             return self::parseDuration($date);
-        } elseif (strlen($date)===8) {
+        } elseif (is_string($date) && strlen($date) === 8) {
             return self::parseDate($date, $referenceTz);
         } else {
             return self::parseDateTime($date, $referenceTz);

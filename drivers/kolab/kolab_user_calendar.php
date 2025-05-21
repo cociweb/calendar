@@ -79,7 +79,8 @@ class kolab_user_calendar extends kolab_calendar
    */
   public function get_name()
   {
-    return $this->userdata['displayname'] ?: ($this->userdata['name'] ?: $this->userdata['mail']);
+    // PHP7/8: Use null coalescing and fallback for array keys
+    return $this->userdata['displayname'] ?? ($this->userdata['name'] ?? $this->userdata['mail']);
   }
 
   /**
@@ -99,7 +100,8 @@ class kolab_user_calendar extends kolab_calendar
    */
   public function get_title()
   {
-    return trim($this->userdata['displayname'] . '; ' . $this->userdata['mail'], '; ');
+    // PHP7/8: Use null coalescing for array keys
+    return trim(($this->userdata['displayname'] ?? '') . '; ' . ($this->userdata['mail'] ?? ''), '; ');
   }
 
   /**
@@ -374,7 +376,8 @@ class kolab_user_calendar extends kolab_calendar
    */
   private function time_key($event)
   {
-    return sprintf('%s/%s', $event['start']->format('U'), is_object($event['end']) ? $event['end']->format('U') : '0');
+    // PHP7/8: Check if $event['end'] is object before calling format
+    return sprintf('%s/%s', $event['start']->format('U'), (is_object($event['end']) ? $event['end']->format('U') : '0'));
   }
 
   /**

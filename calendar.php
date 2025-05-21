@@ -574,6 +574,7 @@ class calendar extends rcube_plugin
    */
   function preferences_list($p)
   {
+    $table = new html_table(array('class' => 'account-details', 'cols' => 2, 'cellpadding' => 0, 'cellspacing' => 0));
     if ($p['section'] != 'calendar') {
       return $p;
     }
@@ -1007,11 +1008,12 @@ if(count($cals) > 0){
       // compose default alarm preset value
       $alarm_offset  = rcube_utils::get_input_value('_alarm_offset', rcube_utils::INPUT_POST);
       $alarm_value   = rcube_utils::get_input_value('_alarm_value', rcube_utils::INPUT_POST);
-      $default_alarm = $alarm_offset[0] . intval($alarm_value) . $alarm_offset[1];
+      // PHP7/8: Use [] for string offset
+      $default_alarm = (isset($alarm_offset[0]) ? $alarm_offset[0] : '') . intval($alarm_value) . (isset($alarm_offset[1]) ? $alarm_offset[1] : '');
 
       $birthdays_alarm_offset = rcube_utils::get_input_value('_birthdays_alarm_offset', rcube_utils::INPUT_POST);
       $birthdays_alarm_value  = rcube_utils::get_input_value('_birthdays_alarm_value', rcube_utils::INPUT_POST);
-      $birthdays_alarm_value  = $birthdays_alarm_offset[0] . intval($birthdays_alarm_value) . $birthdays_alarm_offset[1];
+      $birthdays_alarm_value  = (isset($birthdays_alarm_offset[0]) ? $birthdays_alarm_offset[0] : '') . intval($birthdays_alarm_value) . (isset($birthdays_alarm_offset[1]) ? $birthdays_alarm_offset[1] : '');
 
       $p['prefs'] = array(
         'calendar_default_view' 		  => rcube_utils::get_input_value('_default_view', rcube_utils::INPUT_POST),
@@ -2758,7 +2760,8 @@ if(count($cals) > 0){
     $ignore = array('changed' => 1, 'attachments' => 1);
 
     foreach (array_unique(array_merge(array_keys($a), array_keys($b))) as $key) {
-      if (!$ignore[$key] && $key[0] != '_' && $a[$key] != $b[$key]) {
+      // PHP7/8: Use [] for string offset
+      if (!$ignore[$key] && isset($key[0]) && $key[0] != '_' && $a[$key] != $b[$key]) {
         $diff[] = $key;
       }
     }
@@ -3198,8 +3201,6 @@ if(count($cals) > 0){
         // prepare a small agenda preview to be filled with actual event data on async request
         if ($ical_objects->method == 'REQUEST') {
           $append = html::div('calendar-agenda-preview',
-            html::tag('h3', 'preview-title', $this->gettext('agenda') . ' ' . html::span('date', $date_str))
-            . '%before%' . $this->mail_agenda_event_row($event, 'current') . '%after%');
         }
 
         $html .= html::div('calendar-invitebox invitebox boxinformation',
@@ -3518,7 +3519,7 @@ if(count($cals) > 0){
                 }
 
                 $master['calendar'] = $event['calendar'] = $calendar['id'];
-                $success = $this->driver->new_event($master);
+                $success = $driver->new_event($master);
               }
               else {
                 $master = null;
@@ -3532,7 +3533,7 @@ if(count($cals) > 0){
           // save to the selected/default calendar
           if (!$master) {
             $event['calendar'] = $calendar['id'];
-            $success = $this->driver->new_event($event);
+            $success = $driver->new_event($event);
           }
         }
         else if ($status == 'declined')

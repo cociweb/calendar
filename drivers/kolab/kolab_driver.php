@@ -1950,7 +1950,7 @@ class kolab_driver extends calendar_driver
 
     $record['id'] = $record['uid'];
 
-    if ($record['_instance']) {
+    if (!empty($record['_instance'])) {
       $record['id'] .= '-' . $record['_instance'];
 
       if (!$record['recurrence_id'] && !empty($record['recurrence']))
@@ -1958,13 +1958,14 @@ class kolab_driver extends calendar_driver
     }
 
     // all-day events go from 12:00 - 13:00
-    if (is_a($record['start'], 'DateTimeImmutable') && $record['end'] <= $record['start'] && $record['allday']) {
+    if (is_a($record['start'], 'DateTimeImmutable') && $record['end'] <= $record['start'] && !empty($record['allday'])) {
       $record['end'] = clone $record['start'];
       $record['end'] = $record['end']->add(new DateInterval('PT1H'));
     }
 
     // translate internal '_attachments' to external 'attachments' list
     if (!empty($record['_attachments'])) {
+      $attachments = array();
       foreach ($record['_attachments'] as $key => $attachment) {
         if ($attachment !== false) {
           if (!$attachment['name'])
@@ -1994,7 +1995,7 @@ class kolab_driver extends calendar_driver
       $record['categories'] = $record['categories'][0];
 
     // the cancelled flag transltes into status=CANCELLED
-    if ($record['cancelled'])
+    if (!empty($record['cancelled']))
       $record['status'] = 'CANCELLED';
 
     // The web client only supports DISPLAY type of alarms

@@ -859,7 +859,7 @@ class database_driver extends calendar_driver
                     break;
                 }
 
-                // stop adding events for inifinite recurrence after 20 years
+                // stop adding events for infinite recurrence after 20 years
                 if (++$count > 999 || (!$recurrence->recurEnd && !$recurrence->recurCount && $next_start->format('Y') > date('Y') + 20)) {
                     break;
                 }
@@ -1508,12 +1508,12 @@ class database_driver extends calendar_driver
     {
         $attendees = array();
 
-        // decode json serialized string
-        if ($s_attendees[0] == '[') {
+        // PHP7/8: Check string length before accessing offset
+        if (strlen($s_attendees) && $s_attendees[0] == '[') {
             $attendees = json_decode($s_attendees, true);
         }
         // decode the old serialization format
-        else {
+        else if (strlen($s_attendees)) {
             foreach (explode("\n", $s_attendees) as $line) {
                 $att = array();
                 foreach (rcube_utils::explode_quoted_string(';', $line) as $prop) {

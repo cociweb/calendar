@@ -120,11 +120,12 @@ class resources_driver_ldap extends resources_driver
 
       foreach ((array) $rec['attributes'] as $sattr) {
         $sattr = trim($sattr);
-        if ($sattr && $sattr[0] === '{') {
+        // PHP7/8: Check string length before accessing offset
+        if (strlen($sattr) && $sattr[0] === '{') {
           $attr = @json_decode($sattr, true);
           $attributes += $attr;
         }
-        else if ($sattr && empty($rec['description'])) {
+        else if (strlen($sattr) && empty($rec['description'])) {
           $rec['description'] = $sattr;
         }
       }

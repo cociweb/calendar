@@ -40,15 +40,15 @@ window.rcmail && rcmail.addEventListener('init', function(evt) {
   var settings = $.extend(rcmail.env.calendar_settings, rcmail.env.libcal_settings);
 
   // create list of event sources AKA calendars
-  var id, src, event_sources = [];
-  var add_url = (rcmail.env.search ? '&q='+escape(rcmail.env.search) : '');
+  var id, source, event_sources = [];
+  var add_url = (rcmail.env.search ? '&q='+encodeURIComponent(rcmail.env.search) : '');
   for (id in rcmail.env.calendars) {
     if (!rcmail.env.calendars[id].active)
       continue;
 
     var driver = rcmail.env.calendars[id].driver;
-	source = $.extend({
-      url: './?_task=calendar&_action=load_events&drivers=' + driver + '&source=' + escape(id) + add_url,
+    source = $.extend({
+      url: './?_task=calendar&_action=load_events&drivers=' + driver + '&source=' + encodeURIComponent(id) + add_url,
       className: 'fc-event-cal-'+id,
       id: id
     }, rcmail.env.calendars[id]);

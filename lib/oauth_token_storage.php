@@ -74,7 +74,9 @@ class oauth_token_storage implements StorageInterface
             $this->provider["name"],
             $client_config_id,
             $context->getUserId(),
-            $context->getScope()->toString());
+            // PHP7/8: Scope object may need toString() or __toString()
+            method_exists($context->getScope(), 'toString') ? $context->getScope()->toString() : (string)$context->getScope()
+        );
 
         if($result && ($data = $this->db->fetch_assoc($result))) {
             $data["scope"] = Scope::fromString($data["scope"]);
@@ -127,7 +129,8 @@ class oauth_token_storage implements StorageInterface
             $this->provider["name"],
             $client_config_id,
             $context->getUserId(),
-            $context->getScope()->toString());
+            method_exists($context->getScope(), 'toString') ? $context->getScope()->toString() : (string)$context->getScope()
+        );
 
         if($result && ($data = $this->db->fetch_assoc($result))) {
             $data["scope"] = Scope::fromString($data["scope"]);
@@ -161,7 +164,7 @@ class oauth_token_storage implements StorageInterface
             $this->provider["name"],
             $state->getClientConfigId(),
             $state->getUserId(),
-            $state->getScope()->toString(),
+            method_exists($state->getScope(), 'toString') ? $state->getScope()->toString() : (string)$state->getScope(),
             $state->getIssueTime(),
             $state->getState()
         );

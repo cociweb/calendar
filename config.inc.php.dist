@@ -234,7 +234,7 @@ $config['calendar_ical_debug'] = false;
                     'name'         => '',
                     'caldav_user'  => '%l',
                     'caldav_pass'  => '%p',
-                    'caldav_url'   => 'https://%h/remote.php/dav/calendars/%l/', //specify host URL instead of %h if nextcloud is on the other host
+                    'caldav_url'   => 'https://%h/remote.php/dav/calendars/', //specify host URL instead of %h if nextcloud is on the other host
                     'color' 	   =>  '',
                     'showAlarms'   => 1));
 

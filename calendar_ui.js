@@ -2209,8 +2209,8 @@ function rcube_calendar_ui(settings)
 
       if (rcmail.gui_objects.resourceinfo) {
         var tr, table = $(rcmail.gui_objects.resourceinfo).show().find('tbody').html(''),
-          attribs = $.extend({ name:resource.name }, resource.attributes||{})
-          attribs.description = resource.description;
+          attribs = $.extend({ name:resource.name }, resource.attributes||{});
+        attribs.description = resource.description;
 
         for (var k in attribs) {
           if (typeof attribs[k] == 'undefined')
@@ -2256,6 +2256,9 @@ function rcube_calendar_ui(settings)
           $.each(rec.members, function(j, m){
             resources_tree[m] = rec.ID;
           });
+        }
+        else {
+          resources_tree[rec.ID] = null;
         }
       });
 
@@ -3177,7 +3180,7 @@ function rcube_calendar_ui(settings)
       }
     };
 
-    // display the edit dialog, request 'new' action and pass the selected event
+    // display the edit dialog, request 'new' action and pass the selected event.
     this.event_copy = function(event) {
       if (event && event.id) {
         var copy = $.extend(true, {}, event);

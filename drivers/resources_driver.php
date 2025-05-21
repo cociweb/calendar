@@ -88,20 +88,23 @@ abstract class resources_driver
           $fblist = $this->cal->driver->get_freebusy_list($rec['email'], $start, $end);
           if (is_array($fblist)) {
               foreach ($fblist as $slot) {
-                  list($from, $to, $type) = $slot;
-                  if ($type == calendar::FREEBUSY_FREE || $type == calendar::FREEBUSY_UNKNOWN) {
-                      continue;
-                  }
-                  if ($from < $end && $to > $start) {
-                      $event = array(
-                          'id'     => sha1($id . $from . $to),
-                          'title'  => $rec['name'],
-                          'start'  => new DateTimeImmutable('@' . $from),
-                          'end'    => new DateTimeImmutable('@' . $to),
-                          'status' => $fbtypemap[$type],
-                          'calendar' => '_resource',
-                      );
-                      $events[] = $event;
+                  // PHP7/8: Ensure $slot is array and has at least 3 elements
+                  if (is_array($slot) && count($slot) >= 3) {
+                      list($from, $to, $type) = $slot;
+                      if ($type == calendar::FREEBUSY_FREE || $type == calendar::FREEBUSY_UNKNOWN) {
+                          continue;
+                      }
+                      if ($from < $end && $to > $start) {
+                          $event = array(
+                              'id'     => sha1($id . $from . $to),
+                              'title'  => $rec['name'],
+                              'start'  => new DateTimeImmutable('@' . $from),
+                              'end'    => new DateTimeImmutable('@' . $to),
+                              'status' => $fbtypemap[$type] ?? 'busy',
+                              'calendar' => '_resource',
+                          );
+                          $events[] = $event;
+                      }
                   }
               }
           }

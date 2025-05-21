@@ -114,7 +114,8 @@ class oauth_client
         $query = array();
         foreach(array("state", "code", "error", "error_description") as $key)
         {
-            $input_value = get_input_value(isset($_GET[$key]) ? $key : "_".$key, rcube_utils::INPUT_GET);
+            // PHP7/8: Use rcube_utils::get_input_value for compatibility
+            $input_value = rcube_utils::get_input_value(isset($_GET[$key]) ? $key : "_".$key, rcube_utils::INPUT_GET);
             $query[$key] = $input_value;
         }
 
@@ -140,7 +141,8 @@ class oauth_client
 
     public static function decode_state($state = null)
     {
-        if(!$state) $state = get_input_value(isset($_GET["state"]) ? "state" : "_state", rcube_utils::INPUT_GET);
+        // PHP7/8: Use rcube_utils::get_input_value for compatibility
+        if(!$state) $state = rcube_utils::get_input_value(isset($_GET["state"]) ? "state" : "_state", rcube_utils::INPUT_GET);
         return unserialize(base64_decode(strtr($state, '-_,', '+/=')));
     }
 

@@ -830,4 +830,31 @@ abstract class calendar_driver
     // TO BE OVERRIDDEN
     return $args;
   }
+
+  /**
+   * Helper method to decode the attendees list from string
+   * (for drivers that need it, e.g. database/caldav)
+   */
+  public function unserialize_attendees($s_attendees)
+  {
+    $attendees = array();
+
+    // PHP7/8: Check string length before accessing offset
+    if (is_string($s_attendees) && strlen($s_attendees) && $s_attendees[0] == '[') {
+      $attendees = json_decode($s_attendees, true);
+    }
+    // decode the old serialization format
+    else if (is_string($s_attendees) && strlen($s_attendees)) {
+      foreach (explode("\n", $s_attendees) as $line) {
+        $att = array();
+        foreach (rcube_utils::explode_quoted_string(';', $line) as $prop) {
+          list($key, $value) = explode("=", $prop);
+          $att[strtolower($key)] = stripslashes(trim($value, '""'));
+        }
+        $attendees[] = $att;
+      }
+    }
+
+    return $attendees;
+  }
 }

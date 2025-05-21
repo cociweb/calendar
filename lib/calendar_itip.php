@@ -83,33 +83,32 @@ class calendar_itip extends libcalendaring_itip
   {
     if (is_string($invitation))
       $invitation = $this->get_invitation($invitation);
-    
-    if ($invitation['token'] && $invitation['event']) {
-      // update attendee record in event data
+
+    if (!empty($invitation['token']) && !empty($invitation['event'])) {
+      $organizer = null; // PHP7/8: always initialize variables
       foreach ($invitation['event']['attendees'] as $i => $attendee) {
-        if ($attendee['role'] == 'ORGANIZER') {
+        if (!empty($attendee['role']) && $attendee['role'] == 'ORGANIZER') {
           $organizer = $attendee;
         }
-        else if ($attendee['email'] == $email) {
-          // nothing to be done here
-          if ($attendee['status'] == $newstatus)
+        else if (!empty($attendee['email']) && $attendee['email'] == $email) {
+          if (!empty($attendee['status']) && $attendee['status'] == $newstatus)
             return true;
-          
+
           $invitation['event']['attendees'][$i]['status'] = $newstatus;
           $this->sender = $attendee;
         }
       }
       $invitation['event']['changed'] = new DateTimeImmutable();
-      
+
       // send iTIP REPLY message to organizer
       if ($organizer) {
         $status = strtolower($newstatus);
         if ($this->send_itip_message($invitation['event'], 'REPLY', $organizer, 'itipsubject' . $status, 'itipmailbody' . $status))
-          $this->rc->output->command('display_message', $this->plugin->gettext(array('name' => 'sentresponseto', 'vars' => array('mailto' => $organizer['name'] ? $organizer['name'] : $organizer['email']))), 'confirmation');
+          $this->rc->output->command('display_message', $this->plugin->gettext(array('name' => 'sentresponseto', 'vars' => array('mailto' => !empty($organizer['name']) ? $organizer['name'] : $organizer['email']))), 'confirmation');
         else
           $this->rc->output->command('display_message', $this->plugin->gettext('itipresponseerror'), 'error');
       }
-      
+
       // update record in DB
       $query = $this->rc->db->query(
         "UPDATE $this->db_itipinvitations
@@ -122,7 +121,7 @@ class calendar_itip extends libcalendaring_itip
       if ($this->rc->db->affected_rows($query))
         return true;
     }
-    
+
     return false;
   }
 
@@ -137,22 +136,22 @@ class calendar_itip extends libcalendaring_itip
   public function store_invitation($event, $attendee)
   {
     static $stored = array();
-    
-    if (!$event['uid'] || !$attendee)
+
+    if (empty($event['uid']) || !$attendee)
       return false;
-      
+
     // generate token for this invitation
     $token = $this->generate_token($event, $attendee);
     $base = substr($token, 0, 40);
-    
+
     // already stored this
-    if ($stored[$base])
+    if (!empty($stored[$base]))
       return $token;
 
     // delete old entry
     $this->rc->db->query("DELETE FROM $this->db_itipinvitations WHERE `token` = ?", $base);
 
-    $event_uid = $event['uid'] . ($event['_instance'] ? '-' . $event['_instance'] : '');
+    $event_uid = $event['uid'] . (!empty($event['_instance']) ? '-' . $event['_instance'] : '');
 
     $query = $this->rc->db->query(
       "INSERT INTO $this->db_itipinvitations
@@ -162,14 +161,14 @@ class calendar_itip extends libcalendaring_itip
       $event_uid,
       $this->rc->user->ID,
       self::serialize_event($event),
-      date('Y-m-d H:i:s', $event['end']->format('U') + 86400 * 2)
+      date('Y-m-d H:i:s', !empty($event['end']) && $event['end'] instanceof DateTimeImmutable ? $event['end']->format('U') + 86400 * 2 : time() + 86400 * 2)
     );
-    
+
     if ($this->rc->db->affected_rows($query)) {
       $stored[$base] = 1;
       return $token;
     }
-    
+
     return false;
   }
 
@@ -180,7 +179,7 @@ class calendar_itip extends libcalendaring_itip
    */
   public function cancel_itip_invitation($event)
   {
-    $event_uid = $event['uid'] . ($event['_instance'] ? '-' . $event['_instance'] : '');
+    $event_uid = $event['uid'] . (!empty($event['_instance']) ? '-' . $event['_instance'] : '');
 
     // flag invitation record as cancelled
     $this->rc->db->query(
@@ -200,11 +199,11 @@ class calendar_itip extends libcalendaring_itip
    */
   public function generate_token($event, $attendee)
   {
-    $event_uid = $event['uid'] . ($event['_instance'] ? '-' . $event['_instance'] : '');
+    $event_uid = $event['uid'] . (!empty($event['_instance']) ? '-' . $event['_instance'] : '');
     $base = sha1($event_uid . ';' . $this->rc->user->ID);
     $mail = base64_encode($attendee);
     $hash = substr(md5($base . $mail . $this->rc->config->get('des_key')), 0, 6);
-    
+
     return "$base.$mail.$hash";
   }
 
@@ -216,13 +215,16 @@ class calendar_itip extends libcalendaring_itip
    */
   public function decode_token($token)
   {
-    list($base, $mail, $hash) = explode('.', $token);
-    
+    $parts = explode('.', $token);
+    $base = $parts[0] ?? null;
+    $mail = $parts[1] ?? null;
+    $hash = $parts[2] ?? null;
+
     // validate and return parts
     if ($mail && $hash && $hash == substr(md5($base . $mail . $this->rc->config->get('des_key')), 0, 6)) {
       return array('base' => $base, 'attendee' => base64_decode($mail));
     }
-    
+
     return false;
   }
 
@@ -232,7 +234,9 @@ class calendar_itip extends libcalendaring_itip
   private static function serialize_event($event)
   {
     $ev = $event;
-    $ev['description'] = abbreviate_string($ev['description'], 100);
+    if (isset($ev['description'])) {
+      $ev['description'] = abbreviate_string($ev['description'], 100);
+    }
     unset($ev['attachments']);
     return serialize($ev);
   }

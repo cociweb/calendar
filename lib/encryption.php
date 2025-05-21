@@ -67,7 +67,8 @@ class Encryption {
              return false;
         }
 
-        $dec = mcrypt_decrypt($this->cipher, $cipherKey, $enc, $this->mode, $iv);
+        // PHP7/8: Use openssl_decrypt instead of mcrypt_decrypt
+        $dec = openssl_decrypt($enc, $this->cipher, $cipherKey, OPENSSL_RAW_DATA, $iv);
 
         $data = $this->unpad($dec);
 
@@ -83,12 +84,14 @@ class Encryption {
      * @returns string The encrypted data
      */
     public function encrypt($data, $key) {
-        $salt = mcrypt_create_iv(128, MCRYPT_DEV_URANDOM);
+        // PHP7/8: Use random_bytes instead of mcrypt_create_iv
+        $salt = random_bytes(128);
         list ($cipherKey, $macKey, $iv) = $this->getKeys($salt, $key);
 
         $data = $this->pad($data);
 
-        $enc = mcrypt_encrypt($this->cipher, $cipherKey, $data, $this->mode, $iv);
+        // PHP7/8: Use openssl_encrypt instead of mcrypt_encrypt
+        $enc = openssl_encrypt($data, $this->cipher, $cipherKey, OPENSSL_RAW_DATA, $iv);
 
         $mac = hash_hmac('sha512', $enc, $macKey, true);
         return $salt . $enc . $mac;
@@ -103,15 +106,24 @@ class Encryption {
      * @returns array An array of keys (a cipher key, a mac key, and a IV)
      */
     protected function getKeys($salt, $key) {
-        $ivSize = mcrypt_get_iv_size($this->cipher, $this->mode);
-        $keySize = mcrypt_get_key_size($this->cipher, $this->mode);
+        // PHP7/8: Use openssl_cipher_iv_length and openssl_cipher_key_length if available
+        if (function_exists('openssl_cipher_iv_length')) {
+            $ivSize = openssl_cipher_iv_length($this->cipher);
+        } else {
+            $ivSize = 16; // fallback for common ciphers
+        }
+        if (function_exists('openssl_cipher_key_length')) {
+            $keySize = openssl_cipher_key_length($this->cipher);
+        } else {
+            $keySize = 32; // fallback for AES-256
+        }
         $length = 2 * $keySize + $ivSize;
 
         $key = $this->pbkdf2('sha512', $key, $salt, $this->rounds, $length);
 
         $cipherKey = substr($key, 0, $keySize);
         $macKey = substr($key, $keySize, $keySize);
-        $iv = substr($key, 2 * $keySize);
+        $iv = substr($key, 2 * $keySize, $ivSize);
         return array($cipherKey, $macKey, $iv);
     }
 
@@ -145,18 +157,21 @@ class Encryption {
     }
 
     protected function pad($data) {
-        $length = mcrypt_get_block_size($this->cipher, $this->mode);
-        $padAmount = $length - strlen($data) % $length;
+        // PHP7/8: Use openssl_cipher_iv_length for block size if available
+        $block_size = function_exists('openssl_cipher_iv_length') ? openssl_cipher_iv_length($this->cipher) : 16;
+        $padAmount = $block_size - (strlen($data) % $block_size);
         if ($padAmount == 0) {
-            $padAmount = $length;
+            $padAmount = $block_size;
         }
         return $data . str_repeat(chr($padAmount), $padAmount);
     }
 
     protected function unpad($data) {
-        $length = mcrypt_get_block_size($this->cipher, $this->mode);
+        if ($data === false || $data === null || strlen($data) == 0) return false;
+        // PHP7/8: Use openssl_cipher_iv_length for block size if available
+        $block_size = function_exists('openssl_cipher_iv_length') ? openssl_cipher_iv_length($this->cipher) : 16;
         $last = ord($data[strlen($data) - 1]);
-        if ($last > $length) return false;
+        if ($last < 1 || $last > $block_size) return false;
         if (substr($data, -1 * $last) !== str_repeat(chr($last), $last)) {
             return false;
         }

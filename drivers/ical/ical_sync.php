@@ -85,7 +85,8 @@ class ical_sync
             ));
         }
 
-        $vcal = file_get_contents($this->url, false, $context);
+        // PHP7/8: file_get_contents() expects string, handle errors gracefully
+        $vcal = @file_get_contents($this->url, false, $context);
         $updates = array();
         $synced = array();
         if($vcal !== false) {
@@ -102,7 +103,7 @@ class ical_sync
                 $remote_event["calendar"] = $this->cal_id;
 
                 $local_event = null;
-                if($events_hash[$remote_event['uid']])
+                if(isset($events_hash[$remote_event['uid']]))
                     $local_event = $events_hash[$remote_event['uid']];
 
                 // Determine whether event don't need an update.

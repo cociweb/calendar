@@ -1679,11 +1679,11 @@ class caldav_driver extends calendar_driver
     {
         $attendees = array();
         // decode json serialized string
-        if ($s_attendees[0] == '[') {
+        if (strlen($s_attendees) && $s_attendees[0] == '[') {
             $attendees = json_decode($s_attendees, true);
         } // decode the old serialization format
-        else {
-            foreach (explode("\r\n", $event['attendees']) as $line) {
+        else if (strlen($s_attendees)) {
+            foreach (explode("\r\n", $s_attendees) as $line) {
                 $att = array();
                 foreach (rcube_utils::explode_quoted_string(';', $line) as $prop) {
                     list($key, $value) = explode("=", $prop);
@@ -1694,6 +1694,7 @@ class caldav_driver extends calendar_driver
         }
         return $attendees;
     }
+
     /**
      * Handler for user_delete plugin hook
      */
@@ -1869,7 +1870,7 @@ class caldav_driver extends calendar_driver
             {
                 $table = new html_table(array('cols' => 2));
                 foreach ($form['content'] as $col => $colprop) {
-                    $label = !empty($colprop['label']) ? $colprop['label'] : $this->rc->gettext($col);
+                    $label = !empty( $colprop['label'] ) ? $colprop['label'] : $this->rc->gettext($col);
                     $table->add('title', html::label($colprop['id'], rcube::Q($label)));
                     $table->add(null, $colprop['value']);
                 }
@@ -2007,14 +2008,14 @@ class caldav_driver extends calendar_driver
         if (!class_exists('caldav_client')) {
         	require_once ($this->cal->home.'/lib/caldav_client.php');
         }
-        $caldav = new caldav_client($props["caldav_url"], $props["caldav_user"], $props["caldav_pass"], $props["auth_type"]);
+        $caldav = new caldav_client(
+            $props["caldav_url"],
+            $props["caldav_user"],
+            $props["caldav_pass"],
+            isset($props["auth_type"]) ? $props["auth_type"] : null
+        );
         $tokens = parse_url($props["caldav_url"]);
-        $base_uri = $tokens['scheme']."://".$tokens['host'].($tokens['port'] ? ":".$tokens['port'] : null);
-        $caldav_url = $props["caldav_url"];
-        $response = $caldav->prop_find($caldav_url, array_merge($current_user_principal,$cal_attribs), 0);
-        if (!$response) {
-            $this->_raise_error("Resource \"$caldav_url\" has no collections");
-            return false;
+        $base_uri = $tokens['
         }
         else if (array_key_exists ('{DAV:}resourcetype', $response) &&
             $response['{DAV:}resourcetype'] instanceof Sabre\DAV\Xml\Property\ResourceType &&

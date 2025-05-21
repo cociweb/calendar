@@ -44,7 +44,14 @@ class calendar_recurrence extends libcalendaring_recurrence
     if (is_object($event['start']) && is_object($event['end']))
       $this->duration = $event['start']->diff($event['end']);
 
-    $event['start']->_dateonly |= $event['allday'];
+    // PHP7/8: Avoid dynamic property creation, check property existence
+    if (is_object($event['start'])) {
+      if (!property_exists($event['start'], '_dateonly')) {
+        $event['start']->_dateonly = false;
+      }
+      $event['start']->_dateonly = $event['start']->_dateonly || !empty($event['allday']);
+    }
+
     $this->init($event['recurrence'], $event['start']);
   }
 
@@ -71,7 +78,8 @@ class calendar_recurrence extends libcalendaring_recurrence
 
       if ($this->duration) {
         $next['end'] = clone $next_start;
-        $next['end']->add($this->duration);
+        // PHP7/8: DateTimeImmutable::add returns new object, must assign
+        $next['end'] = $next['end']->add($this->duration);
       }
 
       $next['recurrence_date'] = clone $next_start;

@@ -124,8 +124,8 @@ class caldav_client extends Sabre\DAV\Client
             $arr = $this->prop_report($this->path, array(self::CLARK_GETETAG), $event_urls);
             foreach ($arr as $path => $data)
             {
-                // Some caldav server return an empty calendar as event where etag is missing. Skip this!
-                if($data[self::CLARK_GETETAG])
+                // PHP7/8: Use isset() to avoid undefined index notice
+                if(isset($data[self::CLARK_GETETAG]) && $data[self::CLARK_GETETAG])
                 {
                     array_push($etags, array(
                        "url" => $path,
@@ -169,6 +169,10 @@ class caldav_client extends Sabre\DAV\Client
 
             foreach ($vcals as $path => $response)
             {
+                // PHP7/8: Use isset() to avoid undefined index notice
+                if (!isset($response[self::CLARK_CALDATA])) {
+                    continue;
+                }
                 $vcal = $response[self::CLARK_CALDATA];
                 foreach ($this->libvcal->import($vcal) as $event) {
                     $events[$path] = $event;
@@ -202,8 +206,8 @@ class caldav_client extends Sabre\DAV\Client
      */
     public function prop_report($url, array $properties, array $event_urls = array(), $depth = 1)
     {
-        $parent_tag = sizeof($event_urls) > 0 ? "c:calendar-multiget" : "d:propfind";
-        $method = sizeof($event_urls) > 0 ? 'REPORT' : 'PROPFIND';
+        $parent_tag = count($event_urls) > 0 ? "c:calendar-multiget" : "d:propfind";
+        $method = count($event_urls) > 0 ? 'REPORT' : 'PROPFIND';
 
         $body = '<?xml version="1.0"?>'."\r\n".'<'.$parent_tag.' xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">'."\r\n";
 
@@ -287,8 +291,7 @@ class caldav_client extends Sabre\DAV\Client
             $headers = array("Content-Type" => "text/calendar; charset=utf-8");
             if ($etag) $headers["If-Match"] = '"'.$etag.'"';
 
-            // Temporarily disable error reporting since libvcal seems not checking array key properly.
-            // TODO: Remove this todo if we could ensure that those errors come not from incomplete event properties.
+            // PHP7/8: error_reporting returns int, so store and restore properly
             $err_rep = error_reporting(E_ERROR);
             $vcal = $this->libvcal->export(array($event));
             if (is_array($vcal))
@@ -296,9 +299,6 @@ class caldav_client extends Sabre\DAV\Client
             error_reporting($err_rep);
 
             $response = $this->request('PUT', $path, $vcal, $headers);
-
-            // Following http://code.google.com/p/sabredav/wiki/BuildingACalDAVClient#Creating_a_calendar_object, the
-            // caldav server must not always return the new etag.
 
             return $response["statusCode"] == 201 || // 201 (created, successfully created)
                    $response["statusCode"] == 204;   // 204 (no content, successfully updated)

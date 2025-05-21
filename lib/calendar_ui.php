@@ -185,7 +185,8 @@ class calendar_ui
     }
 
     $class = 'cal-' . asciiwords($id, true);
-    $css   = str_replace('$class', $class, $attrib['folder-class']) ?: "li .$class";
+    // PHP7/8: Use null coalescing operator for fallback
+    $css   = str_replace('$class', $class, $attrib['folder-class'] ?? '') ?: "li .$class";
     $css  .= " { color: #$folder_color; }\n";
 
     return $css . ".$class .handle { background-color: #$color; }\n";

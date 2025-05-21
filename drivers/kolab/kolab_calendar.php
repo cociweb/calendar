@@ -898,7 +898,8 @@ class kolab_calendar extends kolab_storage_folder_api
               if (is_numeric($key)) {
                   $out .= self::_complex2string($val);
               }
-              else if (!in_array($key, $ignorekeys)) {
+              // PHP7/8: Check key type before in_array
+              else if (!in_array($key, $ignorekeys, true)) {
                 $out .= $val . ' ';
             }
           }
